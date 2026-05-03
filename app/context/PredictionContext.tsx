@@ -236,7 +236,7 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
             match_label:   label,
             home_score:    home,
             away_score:    away,
-            points_earned: pointsEarned,
+            points_earned: 0, // scored later by admin via score_match()
             updated_at:    savedAt,
           },
           { onConflict: 'user_id,match_id' },
@@ -277,7 +277,7 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
             prop_id:       p.propId,
             prop_label:    p.label,
             value:         String(p.value),
-            points_earned: p.pointsEarned,
+            points_earned: 0, // scored later by admin
             updated_at:    p.savedAt,
           })),
           { onConflict: 'user_id,prop_id' },
