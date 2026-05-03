@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Lexend, Inter, Space_Grotesk } from 'next/font/google';
 import { AppShell } from '@/app/components/nav/AppShell';
 import './globals.css';
@@ -27,6 +27,11 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Vlinder League',
   description: 'World Cup 2026 Prediction League',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
