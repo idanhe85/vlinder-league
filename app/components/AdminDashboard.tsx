@@ -200,20 +200,62 @@ function ApiDataControls() {
 
 // ── Section B: User Oversight ─────────────────────────────────────────────
 
-const MOCK_USERS = [
-  { id: '1', name: 'E_dan',   username: 'idan_hemo', points: 0,  predictions: 0,  role: 'Admin',  active: true  },
-  { id: '2', name: 'Rico_Ko', username: 'rico_kiko', points: 0,  predictions: 0,  role: 'Player', active: true  },
-  { id: '3', name: 'Alex M.', username: 'alexm',     points: 1245, predictions: 18, role: 'Player', active: true  },
-  { id: '4', name: 'Sarah J.', username: 'sarahj',   points: 1180, predictions: 15, role: 'Player', active: true  },
-  { id: '5', name: 'Mike T.', username: 'miket',     points: 1140, predictions: 14, role: 'Player', active: false },
-];
+interface UserRow {
+  id: string;
+  display_name: string | null;
+  username: string;
+  is_admin: boolean;
+  total_points: number;
+  predictions_made: number;
+  props_made: number;
+}
+
+function StatusDot({ filled }: { filled: boolean }) {
+  return (
+    <div
+      className={[
+        'w-2.5 h-2.5 rounded-full flex-shrink-0',
+        filled
+          ? 'bg-primary-container shadow-[0_0_8px_rgba(195,244,0,0.8)]'
+          : 'bg-error shadow-[0_0_8px_rgba(255,180,171,0.7)]',
+      ].join(' ')}
+      title={filled ? 'Submitted' : 'Not submitted'}
+    />
+  );
+}
 
 function UserOversight() {
-  const [search, setSearch] = useState('');
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [search,  setSearch]  = useState('');
+  const [users,   setUsers]   = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = MOCK_USERS.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('leaderboard')
+      .select('id, display_name, username, total_points, predictions_made, props_made')
+      .then(async ({ data }) => {
+        if (!data) { setLoading(false); return; }
+        // Get is_admin from profiles
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, is_admin');
+        const adminMap = new Map((profiles ?? []).map((p) => [p.id, p.is_admin]));
+        setUsers(data.map((r) => ({
+          id:               r.id,
+          display_name:     r.display_name,
+          username:         r.username ?? '',
+          is_admin:         adminMap.get(r.id) ?? false,
+          total_points:     Number(r.total_points),
+          predictions_made: Number(r.predictions_made),
+          props_made:       Number(r.props_made),
+        })));
+        setLoading(false);
+      });
+  }, []);
+
+  const filtered = users.filter((u) =>
+    (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
     u.username.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -225,7 +267,7 @@ function UserOversight() {
           <span className="material-symbols-outlined text-secondary text-[20px]">group</span>
           <h2 className="font-h3 text-h3 text-primary">User Oversight</h2>
           <span className="font-label-caps text-label-caps bg-surface-container-highest px-2 py-0.5 rounded text-on-surface-variant ml-1">
-            {MOCK_USERS.length}
+            {users.length}
           </span>
         </div>
         <div className="relative">
@@ -240,85 +282,89 @@ function UserOversight() {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center gap-5 px-6 py-2.5 bg-surface-container-high border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-primary-container shadow-[0_0_8px_rgba(195,244,0,0.8)]" />
+          <span className="font-label-caps text-[10px] text-on-surface-variant">Submitted</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.7)]" />
+          <span className="font-label-caps text-[10px] text-on-surface-variant">Not submitted</span>
+        </div>
+      </div>
+
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_80px_80px_90px_80px] px-6 py-2.5 bg-surface-container-high border-b border-white/5">
-        {['Player', 'Points', 'Preds', 'Role', 'Actions'].map((h) => (
-          <span key={h} className="font-label-caps text-label-caps text-on-surface-variant">{h}</span>
-        ))}
+      <div className="grid grid-cols-[1fr_110px_110px_80px] px-6 py-2.5 bg-surface-container-high/50 border-b border-white/5">
+        <span className="font-label-caps text-label-caps text-on-surface-variant">Player</span>
+        <span className="font-label-caps text-label-caps text-on-surface-variant text-center">Match Preds</span>
+        <span className="font-label-caps text-label-caps text-on-surface-variant text-center">Prop Bets</span>
+        <span className="font-label-caps text-label-caps text-on-surface-variant text-right">Points</span>
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-white/5">
-        {filtered.map((u) => (
-          <div key={u.id} className="grid grid-cols-[1fr_80px_80px_90px_80px] items-center px-6 py-3 hover:bg-white/3 group relative">
-            {/* Player */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center flex-shrink-0">
-                <span className="font-label-caps text-[10px] text-on-surface-variant">
-                  {u.name.slice(0, 2).toUpperCase()}
+      {loading ? (
+        <div className="divide-y divide-white/5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[1fr_110px_110px_80px] items-center px-6 py-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/10" />
+                <div className="w-24 h-3 bg-white/10 rounded" />
+              </div>
+              <div className="w-6 h-6 bg-white/10 rounded-full mx-auto" />
+              <div className="w-6 h-6 bg-white/10 rounded-full mx-auto" />
+              <div className="w-10 h-3 bg-white/10 rounded ml-auto" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="divide-y divide-white/5">
+          {filtered.map((u) => {
+            const name = u.display_name || u.username;
+            const initials = name.slice(0, 2).toUpperCase();
+            return (
+              <div key={u.id} className="grid grid-cols-[1fr_110px_110px_80px] items-center px-6 py-3 hover:bg-white/3">
+                {/* Player */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center flex-shrink-0">
+                    <span className="font-label-caps text-[10px] text-on-surface-variant">{initials}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-body-md font-semibold text-primary text-sm truncate">{name}</p>
+                    <p className="font-label-caps text-[10px] text-on-surface-variant">@{u.username}</p>
+                  </div>
+                  {u.is_admin && (
+                    <span className="font-label-caps text-[9px] px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-container border border-primary-container/30 flex-shrink-0">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+
+                {/* Match predictions indicator */}
+                <div className="flex items-center justify-center gap-2">
+                  <StatusDot filled={u.predictions_made > 0} />
+                  <span className="font-label-caps text-[10px] text-on-surface-variant tabular-nums">
+                    {u.predictions_made}
+                  </span>
+                </div>
+
+                {/* Props indicator */}
+                <div className="flex items-center justify-center gap-2">
+                  <StatusDot filled={u.props_made > 0} />
+                  <span className="font-label-caps text-[10px] text-on-surface-variant tabular-nums">
+                    {u.props_made}
+                  </span>
+                </div>
+
+                {/* Points */}
+                <span className="font-body-md font-semibold text-primary tabular-nums text-sm text-right">
+                  {u.total_points.toLocaleString()}
                 </span>
               </div>
-              <div>
-                <p className="font-body-md font-semibold text-primary text-sm">{u.name}</p>
-                <p className="font-label-caps text-[10px] text-on-surface-variant">@{u.username}</p>
-              </div>
-              <div className={`w-1.5 h-1.5 rounded-full ml-1 ${u.active ? 'bg-primary-container shadow-[0_0_6px_#c3f400]' : 'bg-outline'}`} />
-            </div>
-            {/* Points */}
-            <span className="font-body-md font-semibold text-primary tabular-nums text-sm">{u.points.toLocaleString()}</span>
-            {/* Predictions */}
-            <span className="text-on-surface-variant text-sm tabular-nums">{u.predictions}</span>
-            {/* Role */}
-            <span className={[
-              'font-label-caps text-label-caps px-2 py-0.5 rounded text-[10px] w-fit',
-              u.role === 'Admin'
-                ? 'bg-primary-container/20 text-primary-container border border-primary-container/30'
-                : 'bg-surface-container-highest text-on-surface-variant',
-            ].join(' ')}>
-              {u.role}
-            </span>
-            {/* Actions */}
-            <div className="relative">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-white/5 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">more_vert</span>
-              </motion.button>
-
-              <AnimatePresence>
-                {openMenu === u.id && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
-                    animate={{ opacity: 1, scale: 1,    y: 0  }}
-                    exit={{    opacity: 0, scale: 0.92, y: -4 }}
-                    transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-8 z-20 w-36 bg-surface-container-high border border-white/10 rounded-xl shadow-2xl overflow-hidden"
-                  >
-                    {['Edit Points', 'Reset Password', 'Ban User'].map((action) => (
-                      <button
-                        key={action}
-                        type="button"
-                        onClick={() => setOpenMenu(null)}
-                        className={[
-                          'w-full text-left px-4 py-2.5 text-sm font-body-md transition-colors',
-                          action === 'Ban User'
-                            ? 'text-error hover:bg-error/10'
-                            : 'text-on-surface hover:bg-white/5',
-                        ].join(' ')}
-                      >
-                        {action}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }
