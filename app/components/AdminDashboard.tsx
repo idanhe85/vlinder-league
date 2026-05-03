@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { createClient } from '@/utils/supabase/client';
+import { toast } from 'sonner';
 
 // ── Animation variants ────────────────────────────────────────────────────
 
@@ -52,84 +54,95 @@ const AdminBtn = ({
 
 // ── Section A: API & Data Controls ────────────────────────────────────────
 
+interface MatchOption { match_id: string; match_label: string; }
+
 function ApiDataControls() {
-  const [syncing,   setSyncing]   = useState(false);
-  const [syncDone,  setSyncDone]  = useState(false);
   const [matchId,   setMatchId]   = useState('');
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
-  const [scoreSaved,setScoreSaved]= useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [matches,   setMatches]   = useState<MatchOption[]>([]);
 
-  const quota = { used: 50, total: 100 };
-  const quotaPct = (quota.used / quota.total) * 100;
+  // Fetch distinct matches that have at least one prediction
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('match_predictions')
+      .select('match_id, match_label')
+      .then(({ data }) => {
+        if (!data) return;
+        const seen = new Set<string>();
+        const unique: MatchOption[] = [];
+        for (const row of data) {
+          if (!seen.has(row.match_id)) {
+            seen.add(row.match_id);
+            unique.push({ match_id: row.match_id, match_label: row.match_label });
+          }
+        }
+        setMatches(unique);
+      });
+  }, []);
 
-  function handleSync() {
-    setSyncing(true);
-    setSyncDone(false);
-    setTimeout(() => { setSyncing(false); setSyncDone(true); }, 1800);
-    setTimeout(() => setSyncDone(false), 4000);
-  }
-
-  function handleScoreSave(e: React.FormEvent) {
+  async function handleScoreSave(e: React.FormEvent) {
     e.preventDefault();
-    setScoreSaved(true);
-    setTimeout(() => setScoreSaved(false), 2500);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/score-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          match_id:   matchId,
+          home_score: Number(homeScore),
+          away_score: Number(awayScore),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success('Scores updated', {
+        description: `${json.updated} prediction${json.updated !== 1 ? 's' : ''} scored.`,
+        icon: '✅',
+      });
+      setMatchId(''); setHomeScore(''); setAwayScore('');
+    } catch (err) {
+      toast.error('Failed to score match', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <motion.div variants={card} className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-5 pb-4 border-b border-white/5">
-        <span className="material-symbols-outlined text-primary-container text-[20px]">api</span>
-        <h2 className="font-h3 text-h3 text-primary">API & Data Controls</h2>
+        <span className="material-symbols-outlined text-primary-container text-[20px]">scoreboard</span>
+        <h2 className="font-h3 text-h3 text-primary">Score Match Results</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Force Sync + Quota */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">DATA SYNC</p>
-            <AdminBtn onClick={handleSync} disabled={syncing} className="w-full justify-center">
-              {syncing ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-on-primary-container/30 border-t-on-primary-container rounded-full animate-spin" />
-                  Syncing…
-                </>
-              ) : syncDone ? (
-                <>
-                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  Synced
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[16px]">sync</span>
-                  Force Sync API
-                </>
-              )}
-            </AdminBtn>
+        {/* Instructions */}
+        <div className="flex flex-col gap-3">
+          <p className="font-label-caps text-label-caps text-on-surface-variant">HOW IT WORKS</p>
+          <div className="flex flex-col gap-2">
+            {[
+              { pts: '10 pts', label: 'Exact score predicted correctly' },
+              { pts: '5 pts',  label: 'Correct outcome (win/draw/loss)' },
+              { pts: '0 pts',  label: 'Wrong prediction' },
+            ].map(({ pts, label }) => (
+              <div key={pts} className="flex items-center gap-3 bg-surface-container-high border border-white/5 rounded-lg px-4 py-2.5">
+                <span className="font-h3 text-h3 text-primary-container w-16 shrink-0">{pts}</span>
+                <span className="font-body-md text-sm text-on-surface-variant">{label}</span>
+              </div>
+            ))}
           </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-label-caps text-label-caps text-on-surface-variant">API QUOTA</p>
-              <span className="font-label-caps text-label-caps text-primary-container">
-                {quota.used} / {quota.total} calls
-              </span>
-            </div>
-            <div className="h-2.5 bg-surface-container-highest rounded-full overflow-hidden border border-white/5">
-              <motion.div
-                className="h-full rounded-full bg-primary-container"
-                initial={{ width: 0 }}
-                animate={{ width: `${quotaPct}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
-              />
-            </div>
-            <p className="text-on-surface-variant text-xs mt-1.5">{quotaPct}% of daily quota used</p>
-          </div>
+          <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">
+            Only matches with saved predictions appear in the dropdown.
+          </p>
         </div>
 
-        {/* Manual Score Update */}
+        {/* Form */}
         <form onSubmit={handleScoreSave} className="flex flex-col gap-3">
-          <p className="font-label-caps text-label-caps text-on-surface-variant">MANUAL SCORE UPDATE</p>
+          <p className="font-label-caps text-label-caps text-on-surface-variant">ENTER RESULT</p>
 
           <select
             value={matchId}
@@ -137,11 +150,12 @@ function ApiDataControls() {
             className="input-field bg-surface-container-highest"
             required
           >
-            <option value="">Select a fixture…</option>
-            <option value="3">FRA vs ESP</option>
-            <option value="4">POR vs ENG</option>
-            <option value="5">NED vs URU</option>
-            <option value="6">ITA vs CRO</option>
+            <option value="">
+              {matches.length === 0 ? 'No predictions saved yet…' : 'Select a fixture…'}
+            </option>
+            {matches.map((m) => (
+              <option key={m.match_id} value={m.match_id}>{m.match_label}</option>
+            ))}
           </select>
 
           <div className="flex items-center gap-2">
@@ -162,13 +176,20 @@ function ApiDataControls() {
 
           <motion.button
             type="submit"
+            disabled={saving || matches.length === 0}
             whileTap={{ scale: 0.96 }}
-            className="btn-surface text-sm"
+            className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {scoreSaved ? (
-              <><span className="material-symbols-outlined text-[16px]">check_circle</span> Saved</>
+            {saving ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-on-primary-container/30 border-t-on-primary-container rounded-full animate-spin" />
+                Scoring…
+              </>
             ) : (
-              <><span className="material-symbols-outlined text-[16px]">save</span> Update Score</>
+              <>
+                <span className="material-symbols-outlined text-[16px]">scoreboard</span>
+                Submit Result & Score
+              </>
             )}
           </motion.button>
         </form>
