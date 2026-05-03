@@ -109,7 +109,7 @@ export default function LoginPage() {
               disabled={loading}
               whileTap={loading ? undefined : { scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              className="w-full mt-1 bg-primary-container text-on-primary-container font-bold text-sm uppercase tracking-wider rounded-xl py-3.5 whitespace-nowrap hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-1 bg-red-500 text-white font-bold text-sm uppercase tracking-wider rounded-xl py-3.5 whitespace-nowrap hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
