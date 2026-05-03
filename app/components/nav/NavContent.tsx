@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { NAV_ITEMS } from './navItems';
 import { NavLink } from './NavLink';
+import { LogoutButton } from './LogoutButton';
 
 interface NavContentProps {
   /** Passed to every NavLink so the drawer can close on navigation */
@@ -62,21 +63,7 @@ export function NavContent({ onLinkClick }: NavContentProps) {
           item={{ href: '/profile', label: 'My Profile', icon: 'person' }}
           onClick={onLinkClick}
         />
-        <button
-          type="button"
-          className={[
-            'flex items-center gap-3 py-3 px-4 rounded-lg w-full',
-            'font-h3 text-sm font-semibold tracking-wide text-left',
-            'text-error/70 hover:bg-white/5 hover:text-error',
-            'transition-all duration-200',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-1 focus-visible:ring-offset-background',
-          ].join(' ')}
-        >
-          <span className="material-symbols-outlined text-[22px] shrink-0" aria-hidden="true">
-            logout
-          </span>
-          Logout
-        </button>
+        <LogoutButton />
       </div>
     </>
   );
