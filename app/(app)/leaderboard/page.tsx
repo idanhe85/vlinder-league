@@ -332,11 +332,12 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
               <span className="ml-2 font-label-caps text-[10px] text-primary-container uppercase tracking-wider">You</span>
             )}
           </p>
-          {gap !== null && (
-            <p className="font-label-caps text-[10px] text-on-surface-variant mt-0.5">
-              -{gap} pts from leader
-            </p>
-          )}
+          <p className="font-label-caps text-[10px] text-on-surface-variant truncate">
+            @{player.username}
+            {gap !== null && (
+              <span className="ml-1.5 text-outline">· -{gap} pts</span>
+            )}
+          </p>
         </div>
       </div>
 
