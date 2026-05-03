@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/app/context/AuthContext';
 import { PredictionProvider } from '@/app/context/PredictionContext';
@@ -45,28 +44,22 @@ interface AppShellProps {
  */
 export function AppShell({ children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const pathname = usePathname();
-  const isAuthPage = pathname === '/login';
 
   return (
     <AuthProvider>
     <PredictionProvider>
-      {isAuthPage ? children : (
-        <>
-          <TopBar
-            onMenuToggle={() => setDrawerOpen((o) => !o)}
-            drawerOpen={drawerOpen}
-          />
-          <SideNav />
-          <MobileDrawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-          />
-          <div className="pt-16 md:pl-64 min-h-screen">
-            {children}
-          </div>
-        </>
-      )}
+      <TopBar
+        onMenuToggle={() => setDrawerOpen((o) => !o)}
+        drawerOpen={drawerOpen}
+      />
+      <SideNav />
+      <MobileDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
+      <div className="pt-16 md:pl-64 min-h-screen">
+        {children}
+      </div>
 
       <Toaster
         position="bottom-right"

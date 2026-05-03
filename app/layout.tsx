@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Lexend, Inter, Space_Grotesk } from 'next/font/google';
-import { AppShell } from '@/app/components/nav/AppShell';
 import './globals.css';
 
 const lexend = Lexend({
@@ -57,7 +56,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-on-background min-h-screen font-body-md antialiased">
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );
