@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface TopBarProps {
@@ -28,6 +29,13 @@ interface TopBarProps {
  */
 export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push('/login');
+    router.refresh();
+  }
   // Email is stored as username@vlinder.league — extract just the username part
   const username = user?.email?.split('@')[0] ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'VL';
@@ -130,7 +138,7 @@ export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
         {user && (
           <button
             type="button"
-            onClick={signOut}
+            onClick={handleSignOut}
             aria-label="Sign out"
             className={[
               'w-9 h-9 flex items-center justify-center rounded-lg',
