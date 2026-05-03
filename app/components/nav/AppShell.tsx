@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/app/context/AuthContext';
 import { PredictionProvider } from '@/app/context/PredictionContext';
@@ -44,30 +45,27 @@ interface AppShellProps {
  */
 export function AppShell({ children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/login';
 
   return (
     <AuthProvider>
     <PredictionProvider>
-      <TopBar
-        onMenuToggle={() => setDrawerOpen((o) => !o)}
-        drawerOpen={drawerOpen}
-      />
+      {!isAuthPage && (
+        <>
+          <TopBar
+            onMenuToggle={() => setDrawerOpen((o) => !o)}
+            drawerOpen={drawerOpen}
+          />
+          <SideNav />
+          <MobileDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+          />
+        </>
+      )}
 
-      {/* Desktop-only sidebar */}
-      <SideNav />
-
-      {/* Mobile drawer + backdrop */}
-      <MobileDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
-
-      {/* Page content
-          pt-16  — clears the fixed TopBar (h-16)
-          md:pl-64 — clears the fixed SideNav (w-64)
-          Using padding (not margin) so percentage-width children
-          calculate against the correct available width. */}
-      <div className="pt-16 md:pl-64 min-h-screen">
+      <div className={isAuthPage ? '' : 'pt-16 md:pl-64 min-h-screen'}>
         {children}
       </div>
 
