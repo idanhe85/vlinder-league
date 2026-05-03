@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { NAV_ITEMS } from './navItems';
 import { NavLink } from './NavLink';
 import { LogoutButton } from './LogoutButton';
+import { MemberCount } from './MemberCount';
 
 interface NavContentProps {
   /** Passed to every NavLink so the drawer can close on navigation */
@@ -32,7 +33,7 @@ export function NavContent({ onLinkClick }: NavContentProps) {
               Vlinder League
             </p>
             <p className="font-label-caps text-label-caps text-on-surface-variant mt-0.5">
-              30 Members Active
+              <MemberCount />
             </p>
           </div>
         </div>

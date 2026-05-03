@@ -60,8 +60,11 @@ export default function LeaderboardPage() {
     <main className="min-h-screen bg-background px-5 py-10 max-w-[80rem] mx-auto">
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="relative overflow-hidden border border-white/10 rounded-2xl p-6 mb-8">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url(/insights_background.jpg)' }} />
+        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #111417 20%, transparent 100%)' }} />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <span className="material-symbols-outlined text-tertiary-container text-[32px]">sports_bar</span>

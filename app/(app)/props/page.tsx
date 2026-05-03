@@ -1,14 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePredictions } from '@/app/context/PredictionContext';
 import { PropNumberInput } from '@/app/components/PropNumberInput';
 import { PropRangeSlider } from '@/app/components/PropRangeSlider';
 import { PlayerSearch } from '@/app/components/PlayerSearch';
 import { MotionButton } from '@/app/components/MotionButton';
+import { createClient } from '@/utils/supabase/client';
+
+type PropStatus = 'active' | 'won' | 'lost';
+interface PropMeta { status: PropStatus; points: number; }
 
 export default function PropsPage() {
   const { savePropPredictions, propPredictions } = usePredictions();
+  const [propMeta, setPropMeta] = useState<Record<string, PropMeta>>({});
+
+  useEffect(() => {
+    createClient()
+      .from('props')
+      .select('id, status, points')
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, PropMeta> = {};
+        for (const p of data) map[p.id] = { status: p.status, points: p.points };
+        setPropMeta(map);
+      });
+  }, []);
 
   // Lifted prop values — components report changes via onChange
   const [totalGoals,      setTotalGoals]      = useState(165);
@@ -75,9 +92,12 @@ export default function PropsPage() {
           />
           <div className="flex items-start justify-between mb-4">
             <div>
-              <span className="inline-block bg-tertiary-container/20 text-tertiary-container font-label-caps text-label-caps px-3 py-1 rounded border border-tertiary-container/30 mb-3">
-                20 PTS REWARD
-              </span>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-block bg-tertiary-container/20 text-tertiary-container font-label-caps text-label-caps px-3 py-1 rounded border border-tertiary-container/30">
+                  20 PTS REWARD
+                </span>
+                <PropStatusBadge meta={propMeta['winner']} />
+              </div>
               <h2 className="font-h3 text-h3 text-primary">Tournament Winner</h2>
               <p className="text-on-surface-variant text-sm mt-1">Select the outright winner of the 2026 World Cup.</p>
             </div>
@@ -123,9 +143,12 @@ export default function PropsPage() {
 
         {/* Golden Ball */}
         <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-          <span className="inline-block bg-secondary/10 text-secondary font-label-caps text-label-caps px-3 py-1 rounded border border-secondary/30 mb-3">
-            15 PTS REWARD
-          </span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-block bg-secondary/10 text-secondary font-label-caps text-label-caps px-3 py-1 rounded border border-secondary/30">
+              15 PTS REWARD
+            </span>
+            <PropStatusBadge meta={propMeta['goldenBall']} />
+          </div>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-h3 text-h3 text-primary">Golden Ball</h2>
@@ -137,7 +160,8 @@ export default function PropsPage() {
         </div>
 
         {/* Total Tournament Goals */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+        <div className="relative bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <div className="absolute top-4 right-4"><PropStatusBadge meta={propMeta['totalGoals']} /></div>
           <PropNumberInput
             label="Total Tournament Goals"
             description="Predict total goals scored across the tournament."
@@ -152,7 +176,8 @@ export default function PropsPage() {
         </div>
 
         {/* Total Red Cards */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+        <div className="relative bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <div className="absolute top-4 right-4"><PropStatusBadge meta={propMeta['totalRedCards']} /></div>
           <PropRangeSlider
             label="Total Red Cards"
             description="Exact number of red cards issued."
@@ -167,7 +192,8 @@ export default function PropsPage() {
         </div>
 
         {/* Total Yellow Cards */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+        <div className="relative bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <div className="absolute top-4 right-4"><PropStatusBadge meta={propMeta['totalYellowCards']} /></div>
           <PropRangeSlider
             label="Total Yellow Cards"
             description="Total bookings across the tournament."
@@ -182,7 +208,8 @@ export default function PropsPage() {
         </div>
 
         {/* Golden Boot */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:col-span-2">
+        <div className="relative bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:col-span-2">
+          <div className="absolute top-4 right-4"><PropStatusBadge meta={propMeta['goldenBoot']} /></div>
           <PropRangeSlider
             label="Golden Boot Goals"
             description="Goals scored by the tournament top scorer."
@@ -209,6 +236,24 @@ export default function PropsPage() {
         </MotionButton>
       </div>
     </main>
+  );
+}
+
+/* ── PropStatusBadge ─────────────────────────────────────────────────────── */
+
+function PropStatusBadge({ meta }: { meta?: PropMeta }) {
+  if (!meta || meta.status === 'active') return null;
+  const won = meta.status === 'won';
+  return (
+    <span className={[
+      'inline-flex items-center gap-1.5 font-label-caps text-[10px] px-2 py-1 rounded border',
+      won
+        ? 'bg-primary-container/10 border-primary-container/30 text-primary-container'
+        : 'bg-error/10 border-error/30 text-error',
+    ].join(' ')}>
+      <span className="material-symbols-outlined text-[12px]">{won ? 'check_circle' : 'cancel'}</span>
+      {won ? `WON · +${meta.points} PTS` : 'LOST · 0 PTS'}
+    </span>
   );
 }
 

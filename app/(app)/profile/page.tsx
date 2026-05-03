@@ -21,6 +21,8 @@ interface Prediction {
   match_label: string;
   home_score: number;
   away_score: number;
+  actual_home: number | null;
+  actual_away: number | null;
   points_earned: number;
   created_at: string;
 }
@@ -220,15 +222,17 @@ function StatRow({ icon, label, value, accent }: { icon: string; label: string; 
 
 function PredictionRow({ prediction }: { prediction: Prediction }) {
   const pts = prediction.points_earned;
-  const hasResult = pts > 0;
+  const scored = prediction.actual_home !== null && prediction.actual_away !== null;
 
   const badgeClass = pts >= 10
     ? 'bg-primary-container/10 border-primary-container/30 text-primary-container'
     : pts > 0
     ? 'bg-secondary-container/10 border-secondary/30 text-secondary'
+    : scored
+    ? 'bg-error/10 border-error/30 text-error'
     : 'bg-white/5 border-white/10 text-on-surface-variant';
 
-  const badgeLabel = pts >= 10 ? 'Exact' : pts > 0 ? 'Result' : 'Pending';
+  const badgeLabel = pts >= 10 ? 'Exact' : pts > 0 ? 'Result' : scored ? 'Wrong' : 'Pending';
 
   const date = new Date(prediction.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short',
@@ -240,7 +244,7 @@ function PredictionRow({ prediction }: { prediction: Prediction }) {
         {/* Badge */}
         <div className={`flex flex-col items-center justify-center w-14 h-14 rounded border shrink-0 ${badgeClass}`}>
           <span className="font-label-caps text-[9px] uppercase">{badgeLabel}</span>
-          <span className="font-h3 text-h3 leading-none mt-0.5">+{pts}</span>
+          <span className="font-h3 text-h3 leading-none mt-0.5">{pts > 0 ? `+${pts}` : scored ? '0' : '—'}</span>
         </div>
         {/* Match info */}
         <div>
@@ -248,13 +252,20 @@ function PredictionRow({ prediction }: { prediction: Prediction }) {
           <p className="font-body-md font-semibold text-primary">{prediction.match_label}</p>
           <p className="font-label-caps text-label-caps text-on-surface-variant mt-0.5">
             Pick: <span className="text-primary-container font-bold">{prediction.home_score} – {prediction.away_score}</span>
+            {scored && (
+              <span className="ml-2 text-outline">
+                · Result: <span className="text-primary font-bold">{prediction.actual_home} – {prediction.actual_away}</span>
+              </span>
+            )}
           </p>
         </div>
       </div>
-      {hasResult && (
+      {scored && (
         <div className="text-right shrink-0">
           <p className="font-label-caps text-[10px] text-outline uppercase mb-1">Points</p>
-          <p className="font-h3 text-h3 text-primary-container">+{pts}</p>
+          <p className={`font-h3 text-h3 ${pts > 0 ? 'text-primary-container' : 'text-error/70'}`}>
+            {pts > 0 ? `+${pts}` : '0'}
+          </p>
         </div>
       )}
     </div>
