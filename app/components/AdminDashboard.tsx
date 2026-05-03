@@ -206,51 +206,91 @@ interface UserRow {
   username: string;
   is_admin: boolean;
   total_points: number;
-  predictions_made: number;
-  props_made: number;
 }
 
-function StatusDot({ filled }: { filled: boolean }) {
+interface RoundMatch { id: string; label: string; }
+
+function StatusDot({ filled, title }: { filled: boolean; title?: string }) {
   return (
     <div
+      title={title ?? (filled ? 'Submitted' : 'Not submitted')}
       className={[
         'w-2.5 h-2.5 rounded-full flex-shrink-0',
         filled
           ? 'bg-primary-container shadow-[0_0_8px_rgba(195,244,0,0.8)]'
           : 'bg-error shadow-[0_0_8px_rgba(255,180,171,0.7)]',
       ].join(' ')}
-      title={filled ? 'Submitted' : 'Not submitted'}
     />
   );
 }
 
 function UserOversight() {
-  const [search,  setSearch]  = useState('');
-  const [users,   setUsers]   = useState<UserRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [search,       setSearch]       = useState('');
+  const [users,        setUsers]        = useState<UserRow[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [roundMatches, setRoundMatches] = useState<RoundMatch[]>([]);
+  const [matchday,     setMatchday]     = useState<number | null>(null);
+  // userId → Set of match_ids they predicted
+  const [predMap, setPredMap] = useState<Map<string, Set<string>>>(new Map());
 
   useEffect(() => {
     const supabase = createClient();
+
+    // 1. Users from leaderboard + admin flag
     supabase
       .from('leaderboard')
-      .select('id, display_name, username, total_points, predictions_made, props_made')
+      .select('id, display_name, username, total_points')
       .then(async ({ data }) => {
         if (!data) { setLoading(false); return; }
-        // Get is_admin from profiles
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, is_admin');
+        const { data: profiles } = await supabase.from('profiles').select('id, is_admin');
         const adminMap = new Map((profiles ?? []).map((p) => [p.id, p.is_admin]));
         setUsers(data.map((r) => ({
-          id:               r.id,
-          display_name:     r.display_name,
-          username:         r.username ?? '',
-          is_admin:         adminMap.get(r.id) ?? false,
-          total_points:     Number(r.total_points),
-          predictions_made: Number(r.predictions_made),
-          props_made:       Number(r.props_made),
+          id:           r.id,
+          display_name: r.display_name,
+          username:     r.username ?? '',
+          is_admin:     adminMap.get(r.id) ?? false,
+          total_points: Number(r.total_points),
         })));
         setLoading(false);
+      });
+
+    // 2. Current round from football API
+    fetch('/api/football/matches')
+      .then((r) => r.json())
+      .then((data) => {
+        const matches = (data.matches ?? []) as Array<{
+          id: number; matchday: number; status: string;
+          homeTeam: { tla: string }; awayTeam: { tla: string };
+        }>;
+        // Active = lowest matchday with upcoming/in-play matches
+        const upcoming = matches.filter(
+          (m) => m.status === 'TIMED' || m.status === 'SCHEDULED' || m.status === 'IN_PLAY',
+        );
+        const pool = upcoming.length > 0 ? upcoming : matches.filter((m) => m.status === 'FINISHED');
+        if (pool.length === 0) return;
+        const targetMd = upcoming.length > 0
+          ? Math.min(...pool.map((m) => m.matchday ?? Infinity))
+          : Math.max(...pool.map((m) => m.matchday ?? 0));
+        const round = matches.filter((m) => m.matchday === targetMd);
+        setMatchday(targetMd);
+        setRoundMatches(round.map((m) => ({
+          id: String(m.id),
+          label: `${m.homeTeam.tla} vs ${m.awayTeam.tla}`,
+        })));
+      })
+      .catch(() => {});
+
+    // 3. All predictions → per-user match coverage
+    supabase
+      .from('match_predictions')
+      .select('user_id, match_id')
+      .then(({ data }) => {
+        const map = new Map<string, Set<string>>();
+        for (const row of data ?? []) {
+          if (!map.has(row.user_id)) map.set(row.user_id, new Set());
+          map.get(row.user_id)!.add(row.match_id);
+        }
+        setPredMap(map);
       });
   }, []);
 
@@ -282,23 +322,34 @@ function UserOversight() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-5 px-6 py-2.5 bg-surface-container-high border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-primary-container shadow-[0_0_8px_rgba(195,244,0,0.8)]" />
-          <span className="font-label-caps text-[10px] text-on-surface-variant">Submitted</span>
+      {/* Legend + matchday label */}
+      <div className="flex items-center justify-between px-6 py-2.5 bg-surface-container-high border-b border-white/5">
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-primary-container shadow-[0_0_8px_rgba(195,244,0,0.8)]" />
+            <span className="font-label-caps text-[10px] text-on-surface-variant">Submitted</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.7)]" />
+            <span className="font-label-caps text-[10px] text-on-surface-variant">Missing</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.7)]" />
-          <span className="font-label-caps text-[10px] text-on-surface-variant">Not submitted</span>
-        </div>
+        {matchday !== null && (
+          <span className="font-label-caps text-[10px] text-primary-container bg-primary-container/10 border border-primary-container/20 px-2 py-0.5 rounded">
+            Matchday {matchday}
+          </span>
+        )}
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_110px_110px_80px] px-6 py-2.5 bg-surface-container-high/50 border-b border-white/5">
+      <div className="grid grid-cols-[minmax(160px,1fr)_1fr_72px] px-6 py-2.5 bg-surface-container-high/50 border-b border-white/5">
         <span className="font-label-caps text-label-caps text-on-surface-variant">Player</span>
-        <span className="font-label-caps text-label-caps text-on-surface-variant text-center">Match Preds</span>
-        <span className="font-label-caps text-label-caps text-on-surface-variant text-center">Prop Bets</span>
+        <span className="font-label-caps text-label-caps text-on-surface-variant">
+          {matchday !== null ? `MD ${matchday} Predictions` : 'Predictions'}
+          {roundMatches.length > 0 && (
+            <span className="text-on-surface-variant/50 ml-1">({roundMatches.length} matches)</span>
+          )}
+        </span>
         <span className="font-label-caps text-label-caps text-on-surface-variant text-right">Points</span>
       </div>
 
@@ -306,13 +357,16 @@ function UserOversight() {
       {loading ? (
         <div className="divide-y divide-white/5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[1fr_110px_110px_80px] items-center px-6 py-3 animate-pulse">
+            <div key={i} className="grid grid-cols-[minmax(160px,1fr)_1fr_72px] items-center px-6 py-4 animate-pulse">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-white/10" />
                 <div className="w-24 h-3 bg-white/10 rounded" />
               </div>
-              <div className="w-6 h-6 bg-white/10 rounded-full mx-auto" />
-              <div className="w-6 h-6 bg-white/10 rounded-full mx-auto" />
+              <div className="flex gap-2">
+                {Array.from({ length: 4 }).map((__, j) => (
+                  <div key={j} className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                ))}
+              </div>
               <div className="w-10 h-3 bg-white/10 rounded ml-auto" />
             </div>
           ))}
@@ -322,8 +376,9 @@ function UserOversight() {
           {filtered.map((u) => {
             const name = u.display_name || u.username;
             const initials = name.slice(0, 2).toUpperCase();
+            const userPreds = predMap.get(u.id) ?? new Set<string>();
             return (
-              <div key={u.id} className="grid grid-cols-[1fr_110px_110px_80px] items-center px-6 py-3 hover:bg-white/3">
+              <div key={u.id} className="grid grid-cols-[minmax(160px,1fr)_1fr_72px] items-center px-6 py-4 hover:bg-white/3">
                 {/* Player */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -340,20 +395,15 @@ function UserOversight() {
                   )}
                 </div>
 
-                {/* Match predictions indicator */}
-                <div className="flex items-center justify-center gap-2">
-                  <StatusDot filled={u.predictions_made > 0} />
-                  <span className="font-label-caps text-[10px] text-on-surface-variant tabular-nums">
-                    {u.predictions_made}
-                  </span>
-                </div>
-
-                {/* Props indicator */}
-                <div className="flex items-center justify-center gap-2">
-                  <StatusDot filled={u.props_made > 0} />
-                  <span className="font-label-caps text-[10px] text-on-surface-variant tabular-nums">
-                    {u.props_made}
-                  </span>
+                {/* Per-match dots */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {roundMatches.length === 0 ? (
+                    <span className="font-label-caps text-[10px] text-on-surface-variant/40">No fixtures</span>
+                  ) : (
+                    roundMatches.map((m) => (
+                      <StatusDot key={m.id} filled={userPreds.has(m.id)} title={m.label} />
+                    ))
+                  )}
                 </div>
 
                 {/* Points */}
