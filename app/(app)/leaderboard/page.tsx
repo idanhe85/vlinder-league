@@ -78,6 +78,11 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
+      {/* ── Podium ───────────────────────────────────────────────────── */}
+      {!loading && players.length >= 1 && (
+        <Podium players={players} currentUserId={user?.id} />
+      )}
+
       {/* ── Table ────────────────────────────────────────────────────── */}
       <div className="bg-surface-container/40 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
 
@@ -126,6 +131,97 @@ export default function LeaderboardPage() {
 }
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
+
+const PODIUM_CONFIG = {
+  1: { height: 'h-28', color: '#ffe088', label: 'GOLD',   size: 'w-20 h-20', textSize: 'text-xl',  crown: true  },
+  2: { height: 'h-20', color: '#c8d4e8', label: 'SILVER', size: 'w-16 h-16', textSize: 'text-base', crown: false },
+  3: { height: 'h-14', color: '#c8956c', label: 'BRONZE', size: 'w-14 h-14', textSize: 'text-sm',  crown: false },
+} as const;
+
+function Podium({ players, currentUserId }: { players: Player[]; currentUserId?: string }) {
+  // Podium visual order: 2nd | 1st | 3rd
+  const slots: Array<{ pos: 1 | 2 | 3; player?: Player }> = [
+    { pos: 2, player: players[1] },
+    { pos: 1, player: players[0] },
+    { pos: 3, player: players[2] },
+  ];
+
+  return (
+    <div className="mb-8 flex items-end justify-center gap-3 sm:gap-6 px-4">
+      {slots.map(({ pos, player }) => {
+        const cfg = PODIUM_CONFIG[pos];
+        if (!player) {
+          // Empty slot placeholder
+          return (
+            <div key={pos} className="flex flex-col items-center gap-2 flex-1 max-w-[160px]">
+              <div className={`${cfg.size} rounded-full bg-surface-container-highest border border-white/10 opacity-30`} />
+              <div className={`w-full ${cfg.height} rounded-t-xl bg-surface-container-highest/30 border border-white/5 flex items-center justify-center`}>
+                <span className="font-h2 text-2xl text-white/10">{pos}</span>
+              </div>
+            </div>
+          );
+        }
+
+        const displayName = player.display_name || player.username;
+        const initials = displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+        const isYou = player.id === currentUserId;
+
+        return (
+          <motion.div
+            key={pos}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: pos === 1 ? 0.1 : pos === 2 ? 0.2 : 0.3, duration: 0.4, ease: 'easeOut' }}
+            className="flex flex-col items-center gap-2 flex-1 max-w-[160px]"
+          >
+            {/* Crown for 1st */}
+            {cfg.crown && (
+              <motion.span
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+                className="text-2xl leading-none"
+                aria-hidden="true"
+              >
+                👑
+              </motion.span>
+            )}
+
+            {/* Avatar */}
+            <div
+              className={`${cfg.size} rounded-full bg-surface-container-highest flex items-center justify-center border-2 shadow-lg flex-shrink-0`}
+              style={{ borderColor: cfg.color, boxShadow: `0 0 20px ${cfg.color}40` }}
+            >
+              <span className={`font-label-caps font-bold text-on-surface-variant ${cfg.textSize}`}>{initials}</span>
+            </div>
+
+            {/* Name */}
+            <div className="text-center">
+              <p className="font-body-md font-semibold text-sm text-primary leading-tight truncate max-w-[120px]">
+                {displayName}
+                {isYou && <span className="ml-1 text-[10px] text-primary-container">You</span>}
+              </p>
+              <p className="font-label-caps text-[11px] tabular-nums mt-0.5" style={{ color: cfg.color }}>
+                {player.total_points.toLocaleString()} pts
+              </p>
+            </div>
+
+            {/* Podium block */}
+            <motion.div
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: pos === 1 ? 0 : pos === 2 ? 0.1 : 0.15, duration: 0.35, ease: 'easeOut' }}
+              style={{ originY: 1, background: `linear-gradient(to bottom, ${cfg.color}22, ${cfg.color}0a)`, borderColor: `${cfg.color}40` }}
+              className={`w-full ${cfg.height} rounded-t-xl border border-b-0 flex items-center justify-center`}
+            >
+              <span className="font-h2 font-extrabold text-3xl" style={{ color: `${cfg.color}60` }}>{pos}</span>
+            </motion.div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
 
 function InfoPill({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
