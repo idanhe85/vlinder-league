@@ -65,7 +65,7 @@ export function AppShell({ children }: AppShellProps) {
         </>
       )}
 
-      <div className={isAuthPage ? '' : 'pt-16 md:pl-64 min-h-screen'}>
+      <div className={isAuthPage ? 'min-h-screen w-full' : 'pt-16 md:pl-64 min-h-screen'}>
         {children}
       </div>
 
