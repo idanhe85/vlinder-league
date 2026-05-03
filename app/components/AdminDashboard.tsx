@@ -395,14 +395,25 @@ function UserOversight() {
                   )}
                 </div>
 
-                {/* Per-match dots */}
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Per-match dots — missing ones show match label */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   {roundMatches.length === 0 ? (
                     <span className="font-label-caps text-[10px] text-on-surface-variant/40">No fixtures</span>
                   ) : (
-                    roundMatches.map((m) => (
-                      <StatusDot key={m.id} filled={userPreds.has(m.id)} title={m.label} />
-                    ))
+                    roundMatches.map((m) => {
+                      const submitted = userPreds.has(m.id);
+                      return submitted ? (
+                        <StatusDot key={m.id} filled title={m.label} />
+                      ) : (
+                        <span
+                          key={m.id}
+                          className="inline-flex items-center gap-1.5 bg-error/10 border border-error/20 rounded px-1.5 py-0.5"
+                        >
+                          <StatusDot filled={false} />
+                          <span className="font-label-caps text-[9px] text-error whitespace-nowrap">{m.label}</span>
+                        </span>
+                      );
+                    })
                   )}
                 </div>
 
