@@ -198,7 +198,7 @@ export default function PropsPage() {
             label="Total Yellow Cards"
             description="Total bookings across the tournament."
             min={0}
-            max={100}
+            max={300}
             step={1}
             initialValue={totalYellowCards}
             reward="8 PTS REWARD"
@@ -212,7 +212,7 @@ export default function PropsPage() {
           <div className="absolute top-4 right-4"><PropStatusBadge meta={propMeta['goldenBoot']} /></div>
           <PropRangeSlider
             label="Golden Boot Goals"
-            description="Goals scored by the tournament top scorer."
+            description="How many goals will the tournament's top scorer finish with? Predict the exact tally of the player who scores the most goals across the whole World Cup."
             min={3}
             max={12}
             step={1}
