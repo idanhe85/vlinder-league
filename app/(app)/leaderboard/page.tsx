@@ -90,27 +90,25 @@ export default function LeaderboardPage() {
       <div className="bg-surface-container/40 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="grid grid-cols-[60px_1fr_100px_120px_120px] bg-surface-container-high border-b border-white/10 px-4 py-3">
+        <div className="grid grid-cols-[60px_1fr_1fr_100px] bg-surface-container-high border-b border-white/10 px-4 py-3">
           <span className="font-label-caps text-label-caps text-on-surface-variant">Rank</span>
           <span className="font-label-caps text-label-caps text-on-surface-variant">Player</span>
+          <span className="font-label-caps text-label-caps text-on-surface-variant">User Name</span>
           <span className="font-label-caps text-label-caps text-on-surface-variant text-right">Points</span>
-          <span className="font-label-caps text-label-caps text-on-surface-variant text-right hidden sm:block">Matches</span>
-          <span className="font-label-caps text-label-caps text-on-surface-variant text-right hidden md:block">Props</span>
         </div>
 
         {/* Rows */}
         {loading ? (
           <div className="divide-y divide-white/5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="grid grid-cols-[60px_1fr_100px_120px_120px] items-center px-4 py-4 animate-pulse">
+              <div key={i} className="grid grid-cols-[60px_1fr_1fr_100px] items-center px-4 py-4 animate-pulse">
                 <div className="w-6 h-5 bg-white/10 rounded" />
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white/10" />
-                  <div className="w-28 h-4 bg-white/10 rounded" />
+                  <div className="w-20 h-4 bg-white/10 rounded" />
                 </div>
+                <div className="w-24 h-4 bg-white/10 rounded" />
                 <div className="ml-auto w-12 h-5 bg-white/10 rounded" />
-                <div className="ml-auto w-8 h-5 bg-white/10 rounded hidden sm:block" />
-                <div className="ml-auto w-8 h-5 bg-white/10 rounded hidden md:block" />
               </div>
             ))}
           </div>
@@ -275,7 +273,7 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
       exit={{ opacity: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={[
-        'grid grid-cols-[60px_1fr_100px_120px_120px] items-center px-4 py-4',
+        'grid grid-cols-[60px_1fr_1fr_100px] items-center px-4 py-4',
         'hover:bg-white/5 group relative overflow-hidden',
         isCurrentUser
           ? 'bg-primary-container/5 border-y border-primary-container/30 shadow-[inset_0_0_20px_rgba(195,244,0,0.05)]'
@@ -315,7 +313,7 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
         </span>
       </div>
 
-      {/* Player */}
+      {/* Player (avatar + display name) */}
       <div className="flex items-center gap-3 min-w-0">
         <div className={[
           'w-10 h-10 rounded-full flex-shrink-0 bg-surface-container-high flex items-center justify-center',
@@ -325,20 +323,20 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
         ].join(' ')}>
           <span className="font-label-caps text-sm text-on-surface-variant">{initials}</span>
         </div>
-        <div className="min-w-0">
-          <p className="font-body-md font-semibold text-primary truncate group-hover:text-tertiary-container transition-colors duration-150">
-            {displayName}
-            {isCurrentUser && (
-              <span className="ml-2 font-label-caps text-[10px] text-primary-container uppercase tracking-wider">You</span>
-            )}
-          </p>
-          <p className="font-label-caps text-[10px] text-on-surface-variant truncate">
-            @{player.username}
-            {gap !== null && (
-              <span className="ml-1.5 text-outline">· -{gap} pts</span>
-            )}
-          </p>
-        </div>
+        <p className="font-body-md font-semibold text-primary truncate group-hover:text-tertiary-container transition-colors duration-150">
+          {displayName}
+          {isCurrentUser && (
+            <span className="ml-2 font-label-caps text-[10px] text-primary-container uppercase tracking-wider">You</span>
+          )}
+        </p>
+      </div>
+
+      {/* User Name */}
+      <div className="min-w-0">
+        <p className="font-label-caps text-sm text-on-surface-variant truncate">@{player.username}</p>
+        {gap !== null && (
+          <p className="font-label-caps text-[10px] text-outline mt-0.5">-{gap} pts from leader</p>
+        )}
       </div>
 
       {/* Points */}
@@ -351,16 +349,6 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
             ? <NumberTicker value={player.total_points} />
             : player.total_points.toLocaleString()}
         </span>
-      </div>
-
-      {/* Predictions */}
-      <div className="text-right hidden sm:block">
-        <span className="font-body-md text-on-surface-variant tabular-nums">{player.predictions_made}</span>
-      </div>
-
-      {/* Props */}
-      <div className="text-right hidden md:block">
-        <span className="font-body-md text-on-surface-variant tabular-nums">{player.props_made}</span>
       </div>
     </motion.div>
   );
