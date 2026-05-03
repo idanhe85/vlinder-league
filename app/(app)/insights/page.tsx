@@ -3,11 +3,19 @@ export default function InsightsPage() {
     <main className="min-h-screen bg-background px-5 py-10 max-w-[80rem] mx-auto">
 
       {/* ── Match hero card ───────────────────────────────────────────── */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/10 mb-8 bg-surface-container/60 backdrop-blur-xl">
+      <div className="relative rounded-2xl overflow-hidden border border-white/10 mb-8">
+        {/* Stadium photo */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(/insights_background.jpg)' }}
+          aria-hidden="true"
+        />
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-background/75 backdrop-blur-[1px]" aria-hidden="true" />
         {/* Gradient overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to right, #111417 30%, transparent 100%)' }}
+          style={{ background: 'linear-gradient(to right, #111417 20%, transparent 100%)' }}
           aria-hidden="true"
         />
 
