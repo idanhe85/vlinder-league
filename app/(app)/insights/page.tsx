@@ -11,7 +11,7 @@ export default function InsightsPage() {
           aria-hidden="true"
         />
         {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-background/75 backdrop-blur-[1px]" aria-hidden="true" />
+        <div className="absolute inset-0 bg-background/40" aria-hidden="true" />
         {/* Gradient overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
