@@ -24,7 +24,7 @@ export default function InsightsPage() {
           </div>
 
           {/* Teams */}
-          <div className="flex items-center gap-6 sm:gap-12">
+          <div className="flex items-center justify-center gap-6 sm:gap-16">
             <TeamHero name="Brazil" code="BRA" color="#facc15" />
             <div className="text-center flex-shrink-0">
               <p className="font-display-xl text-[3rem] italic text-primary-container font-black leading-none">VS</p>
@@ -137,14 +137,41 @@ export default function InsightsPage() {
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 
+// TLA → ISO 3166-1 alpha-2 for flagcdn.com
+const TLA_TO_ISO: Record<string, string> = {
+  BRA: 'br', GER: 'de', ARG: 'ar', FRA: 'fr', ENG: 'gb-eng',
+  ESP: 'es', ITA: 'it', POR: 'pt', NED: 'nl', BEL: 'be',
+  URU: 'uy', MEX: 'mx', USA: 'us', CRO: 'hr', SEN: 'sn',
+  MAR: 'ma', JPN: 'jp', KOR: 'kr', AUS: 'au', RSA: 'za',
+  CMR: 'cm', GHA: 'gh', NGR: 'ng', EGY: 'eg', TUN: 'tn',
+  CAN: 'ca', CHI: 'cl', COL: 'co', ECU: 'ec', PAR: 'py',
+  PER: 'pe', VEN: 've', POL: 'pl', SUI: 'ch', DEN: 'dk',
+  SWE: 'se', NOR: 'no', AUT: 'at', SCO: 'gb-sct',
+  WAL: 'gb-wls', IRL: 'ie', TUR: 'tr', GRE: 'gr', UKR: 'ua',
+  SRB: 'rs', SVK: 'sk', CZE: 'cz', HUN: 'hu', ROU: 'ro',
+  IRN: 'ir', SAU: 'sa', QAT: 'qa', UAE: 'ae', JOR: 'jo',
+};
+
 function TeamHero({ name, code, color }: { name: string; code: string; color: string }) {
+  const isoCode = TLA_TO_ISO[code];
+  const flagUrl = isoCode ? `https://flagcdn.com/w80/${isoCode}.png` : null;
+
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3">
       <div
-        className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white/20 flex items-center justify-center"
-        style={{ backgroundColor: color + '22' }}
+        className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center overflow-hidden"
+        style={{ borderColor: color + '60', backgroundColor: color + '15', boxShadow: `0 0 20px ${color}30` }}
       >
-        <span className="font-label-caps text-sm font-bold" style={{ color }}>{code}</span>
+        {flagUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={flagUrl}
+            alt={name}
+            className="w-10 h-auto sm:w-12 object-contain rounded-sm"
+          />
+        ) : (
+          <span className="font-label-caps text-sm font-bold" style={{ color }}>{code}</span>
+        )}
       </div>
       <p className="font-h3 text-h3 text-primary">{name}</p>
     </div>
