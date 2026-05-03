@@ -336,9 +336,12 @@ function FixtureCard({ match }: { match: ApiMatch }) {
   const [editing,   setEditing]   = useState(!prediction);
   const [justSaved, setJustSaved] = useState(false);
 
-  const isUpcoming = match.status === 'TIMED' || match.status === 'SCHEDULED';
-  const isFinished = match.status === 'FINISHED';
-  const canSave    = homeInput !== '' && awayInput !== '';
+  const isUpcoming   = match.status === 'TIMED' || match.status === 'SCHEDULED';
+  const isFinished   = match.status === 'FINISHED';
+  const msToKickoff  = new Date(match.utcDate).getTime() - Date.now();
+  const isLocked     = msToKickoff < 60 * 60 * 1000; // locked 1 h before kickoff
+  const canPredict   = isUpcoming && !isLocked;
+  const canSave      = homeInput !== '' && awayInput !== '';
 
   const date = new Date(match.utcDate);
   const dateStr = date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
@@ -415,7 +418,23 @@ function FixtureCard({ match }: { match: ApiMatch }) {
         {/* Prediction zone */}
         {isUpcoming && (
           <div className="border-t border-white/5 pt-4 mt-2">
-            {prediction && !editing ? (
+            {isLocked ? (
+              /* ── Locked state ── */
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[16px]">lock</span>
+                  <span className="font-label-caps text-label-caps">Predictions locked</span>
+                </div>
+                {prediction ? (
+                  <span className="font-body-md text-sm text-primary">
+                    Your pick: <span className="font-semibold tabular-nums">{prediction.home} – {prediction.away}</span>
+                  </span>
+                ) : (
+                  <span className="font-label-caps text-label-caps text-error/70">No prediction submitted</span>
+                )}
+              </div>
+            ) : canPredict && prediction && !editing ? (
+              /* ── Saved, can edit ── */
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary-container text-[18px]">check_circle</span>
@@ -440,6 +459,7 @@ function FixtureCard({ match }: { match: ApiMatch }) {
                 </div>
               </div>
             ) : (
+              /* ── Input form ── */
               <div className="flex items-center gap-3">
                 <span className="font-label-caps text-label-caps text-on-surface-variant text-sm flex-1 text-right">
                   {match.homeTeam.tla}
