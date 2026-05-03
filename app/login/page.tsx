@@ -41,13 +41,20 @@ export default function LoginPage() {
 
       {/* Stadium background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Photo */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: 'url(/login_background.jpg)' }}
+        />
+        {/* Dark overlay so card stays readable */}
+        <div className="absolute inset-0 bg-background/70" />
+        {/* Subtle neon vignette */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(195,244,0,0.07) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(2,102,255,0.06) 0%, transparent 60%)',
+            background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(195,244,0,0.06) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(2,102,255,0.05) 0%, transparent 60%)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-background/70" />
       </div>
 
       {/* Login card */}
