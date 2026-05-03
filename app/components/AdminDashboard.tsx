@@ -439,35 +439,66 @@ interface PropBet {
   status: 'active' | 'won' | 'lost';
 }
 
-const INITIAL_PROPS: PropBet[] = [
-  { id: '1', question: 'Total Tournament Goals > 150', points: 10, status: 'active' },
-  { id: '2', question: 'Brazil wins the tournament',   points: 20, status: 'active' },
-  { id: '3', question: 'More than 5 red cards in QFs', points: 15, status: 'active' },
-];
-
 function PropBetManagement() {
-  const [props,     setProps]     = useState<PropBet[]>(INITIAL_PROPS);
+  const [props,     setProps]     = useState<PropBet[]>([]);
+  const [loading,   setLoading]   = useState(true);
   const [question,  setQuestion]  = useState('');
   const [ptValue,   setPtValue]   = useState('');
   const [flashId,   setFlashId]   = useState<string | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
 
-  function handleCreate(e: React.FormEvent) {
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('props')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        setProps((data ?? []) as PropBet[]);
+        setLoading(false);
+      });
+  }, []);
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    const newProp: PropBet = {
-      id: Date.now().toString(),
-      question,
-      points: Number(ptValue),
-      status: 'active',
-    };
-    setProps((p) => [newProp, ...p]);
-    setQuestion('');
-    setPtValue('');
+    const id = `custom_${Date.now()}`;
+    const newProp: PropBet = { id, question, points: Number(ptValue), status: 'active' };
+    const supabase = createClient();
+    const { error } = await supabase.from('props').insert(newProp);
+    if (!error) {
+      setProps((p) => [...p, newProp]);
+      setQuestion('');
+      setPtValue('');
+      toast.success('Prop created');
+    } else {
+      toast.error('Failed to create prop', { description: error.message });
+    }
   }
 
-  function resolve(id: string, status: 'won' | 'lost') {
+  async function resolve(id: string, status: 'won' | 'lost') {
+    setResolving(id);
     setFlashId(id);
-    setProps((p) => p.map((prop) => prop.id === id ? { ...prop, status } : prop));
-    setTimeout(() => setFlashId(null), 600);
+    try {
+      const res = await fetch('/api/admin/resolve-prop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prop_id: id, status }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setProps((p) => p.map((prop) => prop.id === id ? { ...prop, status } : prop));
+      toast.success(status === 'won' ? 'Prop marked as Won' : 'Prop marked as Lost', {
+        description: `${json.updated} prediction${json.updated !== 1 ? 's' : ''} scored.`,
+        icon: status === 'won' ? '✅' : '❌',
+      });
+    } catch (err) {
+      toast.error('Failed to resolve prop', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setResolving(null);
+      setTimeout(() => setFlashId(null), 600);
+    }
   }
 
   const statusStyle: Record<PropBet['status'], string> = {
@@ -514,12 +545,17 @@ function PropBetManagement() {
           </form>
         </div>
 
-        {/* Active props list */}
+        {/* Props list */}
         <div>
           <p className="font-label-caps text-label-caps text-on-surface-variant mb-3">
-            ACTIVE PROPS ({props.length})
+            ALL PROPS ({props.length})
           </p>
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-14 bg-white/5 rounded-xl animate-pulse" />
+              ))
+            ) : (
             <AnimatePresence initial={false}>
               {props.map((prop) => (
                 <motion.div
@@ -543,18 +579,20 @@ function PropBetManagement() {
                       <motion.button
                         type="button"
                         whileTap={{ scale: 0.88 }}
+                        disabled={resolving === prop.id}
                         onClick={() => resolve(prop.id, 'won')}
                         title="Mark as Won"
-                        className="w-7 h-7 rounded-lg bg-primary-container/10 border border-primary-container/30 text-primary-container hover:bg-primary-container/20 flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-lg bg-primary-container/10 border border-primary-container/30 text-primary-container hover:bg-primary-container/20 flex items-center justify-center transition-colors disabled:opacity-40"
                       >
                         <span className="material-symbols-outlined text-[14px]">check</span>
                       </motion.button>
                       <motion.button
                         type="button"
                         whileTap={{ scale: 0.88 }}
+                        disabled={resolving === prop.id}
                         onClick={() => resolve(prop.id, 'lost')}
                         title="Mark as Lost"
-                        className="w-7 h-7 rounded-lg bg-error/10 border border-error/30 text-error hover:bg-error/20 flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-lg bg-error/10 border border-error/30 text-error hover:bg-error/20 flex items-center justify-center transition-colors disabled:opacity-40"
                       >
                         <span className="material-symbols-outlined text-[14px]">close</span>
                       </motion.button>
@@ -563,6 +601,7 @@ function PropBetManagement() {
                 </motion.div>
               ))}
             </AnimatePresence>
+            )}
           </div>
         </div>
       </div>
