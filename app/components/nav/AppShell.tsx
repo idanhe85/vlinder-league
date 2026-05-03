@@ -51,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <AuthProvider>
     <PredictionProvider>
-      {!isAuthPage && (
+      {isAuthPage ? children : (
         <>
           <TopBar
             onMenuToggle={() => setDrawerOpen((o) => !o)}
@@ -62,12 +62,11 @@ export function AppShell({ children }: AppShellProps) {
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
           />
+          <div className="pt-16 md:pl-64 min-h-screen">
+            {children}
+          </div>
         </>
       )}
-
-      <div className={isAuthPage ? 'min-h-screen w-full' : 'pt-16 md:pl-64 min-h-screen'}>
-        {children}
-      </div>
 
       <Toaster
         position="bottom-right"
