@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { usePredictions } from '@/app/context/PredictionContext';
 import { PropNumberInput } from '@/app/components/PropNumberInput';
 import { PropRangeSlider } from '@/app/components/PropRangeSlider';
-import { PlayerSearch } from '@/app/components/PlayerSearch';
 import { MotionButton } from '@/app/components/MotionButton';
 import { createClient } from '@/utils/supabase/client';
 
@@ -33,7 +32,7 @@ export default function PropsPage() {
   const [totalYellowCards,setTotalYellowCards]= useState(50);
   const [goldenBoot,      setGoldenBoot]      = useState(7);
   const [winner,          setWinner]          = useState('');
-  const [goldenBall,      setGoldenBall]      = useState('K. Mbappé');
+  const [goldenBall,      setGoldenBall]      = useState('');
 
   const [saveFlash,       setSaveFlash]       = useState(false);
 
@@ -142,7 +141,7 @@ export default function PropsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 
         {/* Golden Ball */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+        <div className="relative z-10 bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="inline-block bg-secondary/10 text-secondary font-label-caps text-label-caps px-3 py-1 rounded border border-secondary/30">
               15 PTS REWARD
@@ -156,7 +155,36 @@ export default function PropsPage() {
             </div>
             <span className="material-symbols-outlined text-[36px] text-secondary opacity-60">star</span>
           </div>
-          <PlayerSearch value={goldenBall} onChange={setGoldenBall} />
+          <div className="relative">
+            {goldenBall && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl pointer-events-none z-10">
+                {GOLDEN_BALL_PLAYERS.find((p) => p.name === goldenBall)?.flag}
+              </span>
+            )}
+            <select
+              value={goldenBall}
+              onChange={(e) => setGoldenBall(e.target.value)}
+              className={[
+                'w-full appearance-none bg-surface-container-highest border border-white/20 rounded-xl',
+                'py-3 pr-10 text-sm font-semibold text-primary',
+                'focus:outline-none focus:border-secondary focus:shadow-[0_0_0_2px_rgba(179,197,255,0.2)]',
+                'transition-all duration-150 cursor-pointer',
+                goldenBall ? 'pl-10' : 'pl-4',
+              ].join(' ')}
+            >
+              <option value="" className="bg-[#1e2226] text-on-surface-variant">
+                — Select a player —
+              </option>
+              {GOLDEN_BALL_PLAYERS.map((p) => (
+                <option key={p.name} value={p.name} className="bg-[#1e2226] text-on-surface">
+                  {p.flag} {p.name}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
+              expand_more
+            </span>
+          </div>
         </div>
 
         {/* Total Tournament Goals */}
@@ -259,6 +287,37 @@ function PropStatusBadge({ meta }: { meta?: PropMeta }) {
 
 /* ── WinnerOption ─────────────────────────────────────────────────────────── */
 
+
+/* ── Golden Ball candidates ──────────────────────────────────────────────── */
+
+const GOLDEN_BALL_PLAYERS = [
+  { flag: '🇫🇷', name: 'Kylian Mbappé (France)'       },
+  { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Harry Kane (England)'        },
+  { flag: '🇪🇸', name: 'Lamine Yamal (Spain)'          },
+  { flag: '🇦🇷', name: 'Lionel Messi (Argentina)'      },
+  { flag: '🇫🇷', name: 'Michael Olise (France)'        },
+  { flag: '🇧🇷', name: 'Vinícius Júnior (Brazil)'      },
+  { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Jude Bellingham (England)'   },
+  { flag: '🇪🇸', name: 'Rodri (Spain)'                 },
+  { flag: '🇳🇴', name: 'Erling Haaland (Norway)'       },
+  { flag: '🇫🇷', name: 'Ousmane Dembélé (France)'      },
+  { flag: '🇵🇹', name: 'Cristiano Ronaldo (Portugal)'  },
+  { flag: '🇦🇷', name: 'Lautaro Martínez (Argentina)'  },
+  { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Bukayo Saka (England)'       },
+  { flag: '🇪🇸', name: 'Mikel Oyarzabal (Spain)'       },
+  { flag: '🇫🇷', name: 'Rayan Cherki (France)'         },
+  { flag: '🇵🇹', name: 'Bruno Fernandes (Portugal)'    },
+  { flag: '🇩🇪', name: 'Florian Wirtz (Germany)'       },
+  { flag: '🇧🇪', name: 'Romelu Lukaku (Belgium)'       },
+  { flag: '🇦🇷', name: 'Julián Álvarez (Argentina)'    },
+  { flag: '🇳🇱', name: 'Cody Gakpo (Netherlands)'      },
+  { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'Cole Palmer (England)'       },
+  { flag: '🇧🇷', name: 'Raphinha (Brazil)'             },
+  { flag: '🇪🇸', name: 'Álvaro Morata (Spain)'         },
+  { flag: '🇩🇪', name: 'Jamal Musiala (Germany)'       },
+  { flag: '🇧🇷', name: 'Neymar (Brazil)'               },
+  { flag: '🇳🇱', name: 'Van Dijk (Netherlands)'        },
+];
 
 /* ── Static data — all 48 WC 2026 qualified teams ───────────────────────── */
 
