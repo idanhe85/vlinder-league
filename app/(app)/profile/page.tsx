@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useAuth } from '@/app/context/AuthContext';
 import { NumberTicker } from '@/app/components/NumberTicker';
+import { PushNotificationToggle } from '@/app/components/PushNotificationToggle';
 
 interface ProfileData {
   username: string;
@@ -28,7 +29,7 @@ interface Prediction {
 }
 
 export default function ProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, avatarUrl } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -99,8 +100,13 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
           {/* Avatar */}
           <div className="relative">
-            <div className="w-32 h-32 md:w-36 md:h-36 rounded-full bg-surface-container-highest border-4 border-primary-container flex items-center justify-center shadow-[0_0_30px_rgba(195,244,0,0.2)]">
-              <span className="font-h1 text-h1 text-primary-container">{loading ? '…' : initials}</span>
+            <div className="w-32 h-32 md:w-36 md:h-36 rounded-full bg-surface-container-highest border-4 border-primary-container overflow-hidden flex items-center justify-center shadow-[0_0_30px_rgba(195,244,0,0.2)]">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-h1 text-h1 text-primary-container">{loading ? '…' : initials}</span>
+              )}
             </div>
           </div>
 
@@ -147,6 +153,11 @@ export default function ProfilePage() {
           <StatRow icon="sports_soccer"  label="Matches predicted" value={String(profile?.predictions_made ?? 0)} />
           <StatRow icon="military_tech"  label="Props submitted"   value={String(profile?.props_made ?? 0)} />
           <StatRow icon="emoji_events"   label="Points earned"     value={String(profile?.total_points ?? 0)} accent />
+
+          <div className="mt-2">
+            <p className="font-label-caps text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">Notifications</p>
+            <PushNotificationToggle />
+          </div>
 
           <div className="mt-auto pt-4 border-t border-white/5">
             <button
@@ -224,15 +235,15 @@ function PredictionRow({ prediction }: { prediction: Prediction }) {
   const pts = prediction.points_earned;
   const scored = prediction.actual_home !== null && prediction.actual_away !== null;
 
-  const badgeClass = pts >= 10
+  const badgeClass = pts >= 45
     ? 'bg-primary-container/10 border-primary-container/30 text-primary-container'
-    : pts > 0
+    : pts >= 30
     ? 'bg-secondary-container/10 border-secondary/30 text-secondary'
     : scored
     ? 'bg-error/10 border-error/30 text-error'
     : 'bg-white/5 border-white/10 text-on-surface-variant';
 
-  const badgeLabel = pts >= 10 ? 'Exact' : pts > 0 ? 'Result' : scored ? 'Wrong' : 'Pending';
+  const badgeLabel = pts >= 45 ? 'Exact' : pts >= 30 ? 'Result' : scored ? 'Wrong' : 'Pending';
 
   const date = new Date(prediction.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short',

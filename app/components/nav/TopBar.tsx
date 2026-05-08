@@ -28,7 +28,7 @@ interface TopBarProps {
  *   The middle bar fades out via `opacity-0`.
  */
 export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, avatarUrl } = useAuth();
   const router = useRouter();
 
   async function handleSignOut() {
@@ -36,7 +36,6 @@ export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
     router.push('/login');
     router.refresh();
   }
-  // Email is stored as username@vlinder.league — extract just the username part
   const username = user?.email?.split('@')[0] ?? '';
   const initials = username.slice(0, 2).toUpperCase() || 'VL';
   return (
@@ -94,6 +93,8 @@ export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
           </div>
         </button>
 
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Vlinder League" className="w-7 h-7 rounded-full object-contain" />
         <span className="font-h3 text-sm font-black italic text-primary-container tracking-tighter select-none">
           Vlinder League
         </span>
@@ -104,35 +105,23 @@ export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
 
       {/* ── Right slot ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className={[
-            'w-9 h-9 flex items-center justify-center rounded-lg',
-            'text-on-surface-variant hover:text-primary-container hover:bg-white/5',
-            'transition-colors duration-150',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container',
-          ].join(' ')}
-        >
-          <span className="material-symbols-outlined text-[22px]" aria-hidden="true">
-            notifications
-          </span>
-        </button>
-
-        <button
-          type="button"
-          aria-label="Settings"
-          className={[
-            'w-9 h-9 flex items-center justify-center rounded-lg',
-            'text-on-surface-variant hover:text-primary-container hover:bg-white/5',
-            'transition-colors duration-150',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container',
-          ].join(' ')}
-        >
-          <span className="material-symbols-outlined text-[22px]" aria-hidden="true">
-            settings
-          </span>
-        </button>
+        {/* Bell: shown only after tournament start (2026-06-11) */}
+        {Date.now() >= new Date('2026-06-11T19:00:00Z').getTime() && (
+          <button
+            type="button"
+            aria-label="Notifications"
+            className={[
+              'w-9 h-9 flex items-center justify-center rounded-lg',
+              'text-on-surface-variant hover:text-primary-container hover:bg-white/5',
+              'transition-colors duration-150',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container',
+            ].join(' ')}
+          >
+            <span className="material-symbols-outlined text-[22px]" aria-hidden="true">
+              notifications
+            </span>
+          </button>
+        )}
 
         {/* Sign out */}
         {user && (
@@ -151,17 +140,20 @@ export function TopBar({ onMenuToggle, drawerOpen }: TopBarProps) {
           </button>
         )}
 
-        {/* Avatar with user initials */}
+        {/* Avatar */}
         <div
           aria-label={user?.email ?? 'Guest'}
           title={user?.email ?? 'Guest'}
-          className="w-8 h-8 rounded-full border border-primary-container/40 overflow-hidden cursor-default"
+          className="w-8 h-8 rounded-full border border-primary-container/40 overflow-hidden cursor-default bg-surface-container-highest flex items-center justify-center"
         >
-          <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+          ) : (
             <span className="font-label-caps text-[10px] text-primary-container select-none">
               {initials}
             </span>
-          </div>
+          )}
         </div>
       </div>
     </header>

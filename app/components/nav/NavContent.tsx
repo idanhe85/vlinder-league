@@ -20,14 +20,12 @@ export function NavContent({ onLinkClick }: NavContentProps) {
       {/* Brand */}
       <div className="px-6 py-6 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant shrink-0">
-            <span
-              className="material-symbols-outlined text-[20px] text-primary-container"
-              aria-hidden="true"
-            >
-              emoji_events
-            </span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Vlinder League"
+            className="w-9 h-9 rounded-full object-contain shrink-0 border border-outline-variant bg-surface-container-highest"
+          />
           <div>
             <p className="font-h3 text-sm font-black italic text-primary-container tracking-tighter leading-none">
               Vlinder League

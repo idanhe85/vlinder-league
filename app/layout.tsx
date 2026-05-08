@@ -26,6 +26,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Vlinder League',
   description: 'World Cup 2026 Prediction League',
+  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {

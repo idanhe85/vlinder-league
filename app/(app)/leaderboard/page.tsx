@@ -11,6 +11,7 @@ interface Player {
   id: string;
   username: string;
   display_name: string | null;
+  avatar_url: string | null;
   total_points: number;
   predictions_made: number;
   props_made: number;
@@ -40,6 +41,7 @@ export default function LeaderboardPage() {
         id:               row.id,
         username:         row.username ?? 'Player',
         display_name:     row.display_name,
+        avatar_url:       row.avatar_url ?? null,
         total_points:     Number(row.total_points),
         predictions_made: Number(row.predictions_made),
         props_made:       Number(row.props_made),
@@ -188,10 +190,15 @@ function Podium({ players, currentUserId }: { players: Player[]; currentUserId?:
 
             {/* Avatar */}
             <div
-              className={`${cfg.size} rounded-full bg-surface-container-highest flex items-center justify-center border-2 shadow-lg flex-shrink-0`}
+              className={`${cfg.size} rounded-full bg-surface-container-highest overflow-hidden flex items-center justify-center border-2 shadow-lg flex-shrink-0`}
               style={{ borderColor: cfg.color, boxShadow: `0 0 20px ${cfg.color}40` }}
             >
-              <span className={`font-label-caps font-bold text-on-surface-variant ${cfg.textSize}`}>{initials}</span>
+              {player.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={player.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <span className={`font-label-caps font-bold text-on-surface-variant ${cfg.textSize}`}>{initials}</span>
+              )}
             </div>
 
             {/* Name */}
@@ -314,12 +321,17 @@ function PlayerRow({ player, topPlayer }: { player: Player; topPlayer?: Player }
       {/* Player (avatar + display name) */}
       <div className="flex items-center gap-3 min-w-0">
         <div className={[
-          'w-10 h-10 rounded-full flex-shrink-0 bg-surface-container-high flex items-center justify-center',
+          'w-10 h-10 rounded-full flex-shrink-0 bg-surface-container-high overflow-hidden flex items-center justify-center',
           isLeader      ? 'border-2 border-tertiary-container'
           : isCurrentUser ? 'border-2 border-primary-container/50'
           : 'border border-surface-bright',
         ].join(' ')}>
-          <span className="font-label-caps text-sm text-on-surface-variant">{initials}</span>
+          {player.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={player.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            <span className="font-label-caps text-sm text-on-surface-variant">{initials}</span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="font-body-md font-semibold text-primary break-words group-hover:text-tertiary-container transition-colors duration-150">

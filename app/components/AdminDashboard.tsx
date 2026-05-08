@@ -54,7 +54,7 @@ const AdminBtn = ({
 
 // ── Section A: API & Data Controls ────────────────────────────────────────
 
-interface MatchOption { match_id: string; match_label: string; }
+interface MatchOption { match_id: string; match_label: string; group: string; matchday: number; }
 
 function ApiDataControls() {
   const [matchId,   setMatchId]   = useState('');
@@ -62,25 +62,30 @@ function ApiDataControls() {
   const [awayScore, setAwayScore] = useState('');
   const [saving,    setSaving]    = useState(false);
   const [matches,   setMatches]   = useState<MatchOption[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(true);
 
-  // Fetch distinct matches that have at least one prediction
+  // Fetch all WC 2026 fixtures from the football API
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from('match_predictions')
-      .select('match_id, match_label')
-      .then(({ data }) => {
-        if (!data) return;
-        const seen = new Set<string>();
-        const unique: MatchOption[] = [];
-        for (const row of data) {
-          if (!seen.has(row.match_id)) {
-            seen.add(row.match_id);
-            unique.push({ match_id: row.match_id, match_label: row.match_label });
-          }
-        }
-        setMatches(unique);
-      });
+    fetch('/api/football/matches')
+      .then((r) => r.json())
+      .then(({ matches: all }) => {
+        if (!all) return;
+        const opts: MatchOption[] = (all as Array<{
+          id: number;
+          stage: string;
+          group: string | null;
+          matchday: number;
+          homeTeam: { tla: string };
+          awayTeam: { tla: string };
+        }>).map((m) => ({
+          match_id:    String(m.id),
+          match_label: `${m.homeTeam.tla} vs ${m.awayTeam.tla}`,
+          group:       m.group ? m.group.replace('GROUP_', 'Group ') : m.stage.replace(/_/g, ' '),
+          matchday:    m.matchday,
+        }));
+        setMatches(opts);
+      })
+      .finally(() => setLoadingMatches(false));
   }, []);
 
   async function handleScoreSave(e: React.FormEvent) {
@@ -125,8 +130,8 @@ function ApiDataControls() {
           <p className="font-label-caps text-label-caps text-on-surface-variant">HOW IT WORKS</p>
           <div className="flex flex-col gap-2">
             {[
-              { pts: '10 pts', label: 'Exact score predicted correctly' },
-              { pts: '5 pts',  label: 'Correct outcome (win/draw/loss)' },
+              { pts: '45 pts', label: 'Exact score' },
+              { pts: '30 pts', label: 'Correct outcome (win/draw/loss)' },
               { pts: '0 pts',  label: 'Wrong prediction' },
             ].map(({ pts, label }) => (
               <div key={pts} className="flex items-center gap-3 bg-surface-container-high border border-white/5 rounded-lg px-4 py-2.5">
@@ -136,7 +141,7 @@ function ApiDataControls() {
             ))}
           </div>
           <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">
-            Only matches with saved predictions appear in the dropdown.
+            All 104 WC 2026 fixtures are available. Scoring a match awards points to every user who predicted it.
           </p>
         </div>
 
@@ -151,11 +156,32 @@ function ApiDataControls() {
             required
           >
             <option value="">
-              {matches.length === 0 ? 'No predictions saved yet…' : 'Select a fixture…'}
+              {loadingMatches ? 'Loading fixtures…' : 'Select a fixture…'}
             </option>
-            {matches.map((m) => (
-              <option key={m.match_id} value={m.match_id}>{m.match_label}</option>
-            ))}
+            {/* Group stage — grouped by matchday */}
+            {[1, 2, 3].map((md) => {
+              const mdMatches = matches.filter((m) => m.matchday === md && m.group.startsWith('Group'));
+              if (mdMatches.length === 0) return null;
+              return (
+                <optgroup key={`md${md}`} label={`Matchday ${md}`}>
+                  {mdMatches.map((m) => (
+                    <option key={m.match_id} value={m.match_id}>
+                      {m.match_label} ({m.group})
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+            {/* Knockout stage */}
+            {matches.filter((m) => !m.group.startsWith('Group')).length > 0 && (
+              <optgroup label="Knockout">
+                {matches.filter((m) => !m.group.startsWith('Group')).map((m) => (
+                  <option key={m.match_id} value={m.match_id}>
+                    {m.match_label} ({m.group})
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
 
           <div className="flex items-center gap-2">
@@ -176,7 +202,7 @@ function ApiDataControls() {
 
           <motion.button
             type="submit"
-            disabled={saving || matches.length === 0}
+            disabled={saving || loadingMatches}
             whileTap={{ scale: 0.96 }}
             className="btn-primary text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -200,12 +226,46 @@ function ApiDataControls() {
 
 // ── Section B: User Oversight ─────────────────────────────────────────────
 
+const AVATAR_OPTIONS = [
+  '/images/De "Biertijd" Woede.gif',
+  '/images/De Bal en Bier Balansact.gif',
+  '/images/De Barbon-Straf.gif',
+  '/images/De Bidon Stout-Plons.gif',
+  '/images/De Bierkan Inworp.gif',
+  '/images/De Donker Bier Wereldbeker.gif',
+  '/images/De Duikende Pint-Redding.gif',
+  '/images/De Frustratie van het Lege Glas.gif',
+  '/images/De Fust-Kopbal.gif',
+  '/images/De Kus op de Bieretiket-Aanvoerdersband.gif',
+  '/images/De Kus op de Gouden Biertrofee.gif',
+  '/images/De Kus op de Viltjessjaal.gif',
+  '/images/De Magische Bierspons.gif',
+  '/images/De Modderige Overwinningskreet.gif',
+  '/images/De Modderige Schuim-Veger.gif',
+  '/images/De Nerveuze Stout-Bezorging.gif',
+  '/images/De Pintjes-Opstelling Tactiek.gif',
+  '/images/De Pretzel-Microfoon Schok.gif',
+  '/images/De Snack- en Biertactiek.gif',
+  '/images/De Speciaalbier Waarschuwingskaart.gif',
+  '/images/De Taphendel Strijdkreet.gif',
+  '/images/De Uitgeputte Pint na de Wedstrijd.gif',
+  '/images/De VAR-Biertap Review.gif',
+  '/images/De Viltjes-Strafkaart.gif',
+  '/images/De Voetbal Bierhelm.gif',
+  '/images/De Vuvuzela Schuimknoei.gif',
+  '/images/Gouden Schoen.gif',
+  '/images/Het Biertje van de Fanatieke Supporter.gif',
+  '/images/Het Happy Hour Wisselbord.gif',
+  '/images/Het Troostbiertje.gif',
+];
+
 interface UserRow {
   id: string;
   display_name: string | null;
   username: string;
   is_admin: boolean;
   total_points: number;
+  avatar_url: string | null;
 }
 
 interface RoundMatch { id: string; label: string; }
@@ -230,26 +290,29 @@ function UserOversight() {
   const [loading,      setLoading]      = useState(true);
   const [roundMatches, setRoundMatches] = useState<RoundMatch[]>([]);
   const [matchday,     setMatchday]     = useState<number | null>(null);
-  // userId → Set of match_ids they predicted
-  const [predMap, setPredMap] = useState<Map<string, Set<string>>>(new Map());
+  const [predMap,      setPredMap]      = useState<Map<string, Set<string>>>(new Map());
+  // avatar picker state
+  const [pickerUserId, setPickerUserId] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // 1. Users from leaderboard + admin flag
+    // 1. Users from leaderboard + admin flag + avatar
     supabase
       .from('leaderboard')
       .select('id, display_name, username, total_points')
       .then(async ({ data }) => {
         if (!data) { setLoading(false); return; }
-        const { data: profiles } = await supabase.from('profiles').select('id, is_admin');
-        const adminMap = new Map((profiles ?? []).map((p) => [p.id, p.is_admin]));
+        const { data: profiles } = await supabase.from('profiles').select('id, is_admin, avatar_url');
+        const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
         setUsers(data.map((r) => ({
           id:           r.id,
           display_name: r.display_name,
           username:     r.username ?? '',
-          is_admin:     adminMap.get(r.id) ?? false,
+          is_admin:     profileMap.get(r.id)?.is_admin ?? false,
           total_points: Number(r.total_points),
+          avatar_url:   profileMap.get(r.id)?.avatar_url ?? null,
         })));
         setLoading(false);
       });
@@ -293,6 +356,26 @@ function UserOversight() {
         setPredMap(map);
       });
   }, []);
+
+  async function assignAvatar(userId: string, avatarUrl: string | null) {
+    setSavingAvatar(true);
+    try {
+      const res = await fetch('/api/admin/set-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, avatarUrl }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, avatar_url: avatarUrl } : u));
+      setPickerUserId(null);
+      toast.success('Avatar updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update avatar');
+    } finally {
+      setSavingAvatar(false);
+    }
+  }
 
   const filtered = users.filter((u) =>
     (u.display_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
@@ -377,13 +460,26 @@ function UserOversight() {
             const name = u.display_name || u.username;
             const initials = name.slice(0, 2).toUpperCase();
             const userPreds = predMap.get(u.id) ?? new Set<string>();
+            const isPickerOpen = pickerUserId === u.id;
             return (
-              <div key={u.id} className="grid grid-cols-[minmax(160px,1fr)_1fr_72px] items-center px-6 py-4 hover:bg-white/3">
+              <div key={u.id} className="border-b border-white/5 last:border-0">
+                <div className="grid grid-cols-[minmax(160px,1fr)_1fr_72px] items-center px-6 py-4 hover:bg-white/3">
                 {/* Player */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <span className="font-label-caps text-[10px] text-on-surface-variant">{initials}</span>
-                  </div>
+                  {/* Avatar — click to open picker */}
+                  <button
+                    type="button"
+                    onClick={() => setPickerUserId(isPickerOpen ? null : u.id)}
+                    title="Set avatar"
+                    className="w-8 h-8 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:border-primary-container/50 transition-colors"
+                  >
+                    {u.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.avatar_url} alt={name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-label-caps text-[10px] text-on-surface-variant">{initials}</span>
+                    )}
+                  </button>
                   <div className="min-w-0">
                     <p className="font-body-md font-semibold text-primary text-sm truncate">{name}</p>
                     <p className="font-label-caps text-[10px] text-on-surface-variant">@{u.username}</p>
@@ -421,6 +517,56 @@ function UserOversight() {
                 <span className="font-body-md font-semibold text-primary tabular-nums text-sm text-right">
                   {u.total_points.toLocaleString()}
                 </span>
+              </div>
+
+                {/* Avatar picker — expands inline */}
+                <AnimatePresence>
+                  {isPickerOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-6 pb-4">
+                        <p className="font-label-caps text-[10px] text-on-surface-variant mb-3">
+                          SELECT AVATAR FOR {name.toUpperCase()}
+                        </p>
+                        <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
+                          {/* Remove avatar option */}
+                          <button
+                            type="button"
+                            onClick={() => assignAvatar(u.id, null)}
+                            disabled={savingAvatar}
+                            title="Remove avatar"
+                            className="w-10 h-10 rounded-full bg-surface-container-high border-2 border-dashed border-white/20 flex items-center justify-center hover:border-error/50 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[14px] text-on-surface-variant">close</span>
+                          </button>
+                          {AVATAR_OPTIONS.map((src) => (
+                            <button
+                              key={src}
+                              type="button"
+                              onClick={() => assignAvatar(u.id, src)}
+                              disabled={savingAvatar}
+                              title={src.split('/').pop()?.replace('.gif', '')}
+                              className={[
+                                'w-10 h-10 rounded-full overflow-hidden border-2 transition-all',
+                                u.avatar_url === src
+                                  ? 'border-primary-container scale-110'
+                                  : 'border-white/10 hover:border-primary-container/50',
+                              ].join(' ')}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={src} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
@@ -609,6 +755,79 @@ function PropBetManagement() {
   );
 }
 
+// ── Section D: Danger Zone ────────────────────────────────────────────────
+
+function DangerZone() {
+  const [confirm, setConfirm] = useState(false);
+  const [busy,    setBusy]    = useState(false);
+
+  async function handleReset() {
+    setBusy(true);
+    try {
+      const res  = await fetch('/api/admin/reset-all', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Reset failed');
+      toast.success('League reset complete', {
+        description: 'All predictions and scores have been cleared.',
+        icon: '🗑️',
+      });
+      setConfirm(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Reset failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <motion.div variants={card} className="bg-error/5 border border-error/20 rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="material-symbols-outlined text-error text-[20px]">warning</span>
+        <h2 className="font-h3 text-h3 text-error">Danger Zone</h2>
+      </div>
+      <p className="text-on-surface-variant text-sm mb-5">
+        Use before tournament start to give everyone a clean slate.
+      </p>
+
+      <div className="bg-surface-container/60 border border-error/20 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-bold text-on-surface text-sm">Reset entire league</p>
+          <p className="text-on-surface-variant text-xs mt-0.5">
+            Deletes all match &amp; prop predictions · resets all scores to 0
+          </p>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {!confirm ? (
+            <motion.div key="initial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <AdminBtn variant="danger" onClick={() => setConfirm(true)}>
+                <span className="material-symbols-outlined text-[16px]">delete_forever</span>
+                Reset all
+              </AdminBtn>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2"
+            >
+              <span className="text-error text-xs font-bold">Are you sure?</span>
+              <AdminBtn variant="surface" onClick={() => setConfirm(false)} disabled={busy}>
+                Cancel
+              </AdminBtn>
+              <AdminBtn variant="danger" onClick={handleReset} disabled={busy}>
+                {busy ? 'Resetting…' : 'Yes, reset everything'}
+              </AdminBtn>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────
 
 export function AdminDashboard() {
@@ -636,6 +855,7 @@ export function AdminDashboard() {
       <ApiDataControls />
       <UserOversight />
       <PropBetManagement />
+      <DangerZone />
     </motion.div>
   );
 }

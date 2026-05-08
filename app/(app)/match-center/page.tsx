@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePredictions } from '@/app/context/PredictionContext';
+import { getTeamFlag } from '@/utils/flagMap';
 import { MatchCardSkeleton } from '@/app/components/MatchCardSkeleton';
 
 /* ── API types ───────────────────────────────────────────────────────────── */
@@ -79,7 +80,7 @@ export default function MatchCenterPage() {
     load();
   }, []);
 
-  const groupStandings = standings.filter((s) => s.type === 'TOTAL');
+  const groupStandings = standings.filter((s) => s.type === 'TOTAL' && s.group !== null);
 
   // When standings aren't available yet, derive groups from match fixtures
   const groupsFromMatches = groupStandings.length === 0
@@ -216,7 +217,7 @@ export default function MatchCenterPage() {
             </div>
 
             <p className="text-on-surface-variant text-sm mb-5">
-              +5 pts per prediction · +3 pts correct outcome · +10 pts exact score
+              30 pts correct outcome · 45 pts exact score · 0 pts wrong
             </p>
 
             {groupMatches.length === 0 ? (
@@ -271,7 +272,7 @@ export default function MatchCenterPage() {
 /* ── GroupCard ───────────────────────────────────────────────────────────── */
 
 function GroupCard({ group }: { group: ApiStandingGroup }) {
-  const label = group.group.replace('GROUP_', 'Group ');
+  const label = (group.group ?? '').replace('GROUP_', 'Group ');
   return (
     <div className="bg-surface-container/60 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
@@ -303,9 +304,9 @@ function GroupCard({ group }: { group: ApiStandingGroup }) {
               <td className="px-4 py-2.5 font-label-caps text-label-caps text-on-surface-variant">{row.position}</td>
               <td className="px-4 py-2.5">
                 <div className="flex items-center gap-2">
-                  {row.team.crest ? (
+                  {getTeamFlag(row.team.name, row.team.crest) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.team.crest} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
+                    <img src={getTeamFlag(row.team.name, row.team.crest)!} alt="" className="w-5 h-5 object-cover rounded-full flex-shrink-0" />
                   ) : (
                     <span className="w-3 h-3 rounded-sm bg-white/20 flex-shrink-0" />
                   )}
@@ -353,7 +354,7 @@ function FixtureCard({ match }: { match: ApiMatch }) {
     if (!canSave) return;
     saveMatchPrediction(
       String(match.id),
-      `${match.homeTeam.tla} vs ${match.awayTeam.tla}`,
+      `${match.homeTeam.tla ?? 'TBD'} vs ${match.awayTeam.tla ?? 'TBD'}`,
       Number(homeInput),
       Number(awayInput),
     );
@@ -471,7 +472,7 @@ function FixtureCard({ match }: { match: ApiMatch }) {
                     onChange={(e) => setHomeInput(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="0"
                     className="w-14 h-12 bg-surface-container-highest border border-white/20 rounded-lg text-center font-h3 text-h3 text-primary focus:outline-none focus:border-primary-container focus:shadow-[0_0_0_2px_rgba(195,244,0,0.25)] transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    aria-label={`${match.homeTeam.tla} score`}
+                    aria-label={`${match.homeTeam.tla ?? 'Home'} score`}
                   />
                   <span className="font-h3 text-h3 text-on-surface-variant">:</span>
                   <input
@@ -480,7 +481,7 @@ function FixtureCard({ match }: { match: ApiMatch }) {
                     onChange={(e) => setAwayInput(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="0"
                     className="w-14 h-12 bg-surface-container-highest border border-white/20 rounded-lg text-center font-h3 text-h3 text-primary focus:outline-none focus:border-primary-container focus:shadow-[0_0_0_2px_rgba(195,244,0,0.25)] transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    aria-label={`${match.awayTeam.tla} score`}
+                    aria-label={`${match.awayTeam.tla ?? 'Away'} score`}
                   />
                 </div>
                 <span className="font-label-caps text-label-caps text-on-surface-variant text-sm flex-1">
@@ -566,9 +567,9 @@ function GroupPreviewCard({ group }: { group: GroupPreview }) {
         {group.teams.map((team) => (
           <div key={team.id} className="flex items-center gap-3 px-4 py-2.5">
             <div className="w-7 h-7 flex items-center justify-center flex-shrink-0">
-              {team.crest
+              {getTeamFlag(team.name, team.crest)
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={team.crest} alt={team.name} className="w-6 h-6 object-contain" />
+                ? <img src={getTeamFlag(team.name, team.crest)!} alt={team.name} className="w-6 h-6 object-cover rounded-full" />
                 : <span className="font-label-caps text-[10px] text-on-surface-variant">{team.tla}</span>
               }
             </div>
@@ -586,20 +587,21 @@ function GroupPreviewCard({ group }: { group: GroupPreview }) {
 function TeamBlock({
   team, score, align,
 }: { team: ApiTeam; score: number | null; align: 'left' | 'right' }) {
+  const tbd = !team.name && !team.tla;
   return (
     <div className={`flex items-center gap-3 flex-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border border-white/20 bg-surface-container-highest overflow-hidden">
-        {team.crest ? (
+        {getTeamFlag(team.name, team.crest) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={team.crest} alt={team.name} className="w-7 h-7 object-contain" />
+          <img src={getTeamFlag(team.name, team.crest)!} alt={team.name ?? ''} className="w-full h-full object-cover" />
         ) : (
           <span className="font-label-caps text-[11px] font-bold text-on-surface-variant">
-            {team.tla.slice(0, 2)}
+            {tbd ? '?' : (team.tla ?? '').slice(0, 2)}
           </span>
         )}
       </div>
       <div className={align === 'right' ? 'text-right' : ''}>
-        <p className="font-body-md font-semibold text-primary">{team.tla}</p>
+        <p className="font-body-md font-semibold text-primary">{team.tla ?? 'TBD'}</p>
         {score !== null ? (
           <p className="font-h3 text-h3 text-primary-container leading-none">{score}</p>
         ) : (

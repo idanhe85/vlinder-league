@@ -4,18 +4,26 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const supabase = createServerClient(
+  // Use anon key + session cookies only for auth verification
+  const anonClient = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
   );
 
   // Verify authenticated + admin
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await anonClient.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
+  const { data: profile } = await anonClient.from('profiles').select('is_admin').eq('id', user.id).single();
   if (!profile?.is_admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  // Use service role key for privileged writes (bypasses RLS)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } },
+  );
 
   const { prop_id, status } = await request.json();
   if (!prop_id || !['won', 'lost'].includes(status)) {

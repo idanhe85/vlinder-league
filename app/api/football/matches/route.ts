@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const res = await fetch(`${BASE}/competitions/WC/matches?${params}`, {
     headers: { 'X-Auth-Token': KEY },
-    next: { revalidate: 60 }, // cache 60 s
+    next: { revalidate: 60 },
   });
 
   if (!res.ok) {

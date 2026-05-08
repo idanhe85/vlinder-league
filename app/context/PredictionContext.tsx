@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
 } from 'react';
 import { toast } from 'sonner';
 import { createClient } from '@/utils/supabase/client';
@@ -53,16 +54,11 @@ type Action =
 
 // ── Scoring ────────────────────────────────────────────────────────────────
 
-const MATCH_RESULTS: Record<string, { home: number; away: number }> = {
-  '1': { home: 2, away: 1 }, // ARG vs GER
-  '2': { home: 3, away: 0 }, // BRA vs USA
-};
+const MATCH_RESULTS: Record<string, { home: number; away: number }> = {};
 
-const PTS_PREDICTION = 5;
-const PTS_OUTCOME    = 3;
-const PTS_EXACT      = 10;
+const PTS_OUTCOME    = 30;
+const PTS_EXACT      = 45;
 const PTS_PROP       = 10;
-const PEER_SCORES    = [1245, 1180, 1140, 1095, 1060, 1020, 985, 960, 940, 915, 900, 845];
 
 function toOutcome(h: number, a: number) {
   return h > a ? 'home' : h < a ? 'away' : 'draw';
@@ -70,10 +66,10 @@ function toOutcome(h: number, a: number) {
 
 function calcMatchPoints(matchId: string, home: number, away: number): number {
   const result = MATCH_RESULTS[matchId];
-  if (!result) return PTS_PREDICTION;
-  if (result.home === home && result.away === away) return PTS_PREDICTION + PTS_EXACT;
-  if (toOutcome(home, away) === toOutcome(result.home, result.away)) return PTS_PREDICTION + PTS_OUTCOME;
-  return PTS_PREDICTION;
+  if (!result) return 0;
+  if (result.home === home && result.away === away) return PTS_EXACT;
+  if (toOutcome(home, away) === toOutcome(result.home, result.away)) return PTS_OUTCOME;
+  return 0;
 }
 
 // ── Reducer ────────────────────────────────────────────────────────────────
@@ -119,6 +115,7 @@ interface PredictionContextValue {
   propPredictions: Record<string, PropPrediction>;
   totalScore: number;
   rank: number;
+  totalPlayers: number;
   recentActivity: ActivityItem[];
   saveMatchPrediction: (matchId: string, label: string, home: number, away: number) => Promise<void>;
   savePropPredictions: (props: Array<{ propId: string; label: string; value: number | string }>) => Promise<void>;
@@ -130,12 +127,14 @@ const PredictionContext = createContext<PredictionContextValue | null>(null);
 
 export function PredictionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const supabase = createClient();
 
   const [state, dispatch] = useReducer(reducer, {
     matchPredictions: {},
     propPredictions: {},
   });
+
+  const [rank, setRank]               = useState(1);
+  const [totalPlayers, setTotalPlayers] = useState(0);
 
   // Load this user's predictions from Supabase whenever they log in / out
   useEffect(() => {
@@ -144,6 +143,7 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
+    const supabase = createClient();
     supabase
       .from('match_predictions')
       .select('*')
@@ -190,10 +190,20 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
     return matchPts + propPts;
   }, [state]);
 
-  const rank = useMemo(
-    () => PEER_SCORES.filter((s) => s > totalScore).length + 1,
-    [totalScore],
-  );
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase
+      .from('leaderboard')
+      .select('id, total_points')
+      .order('total_points', { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setTotalPlayers(data.length);
+        const idx = data.findIndex((r) => r.id === user.id);
+        setRank(idx >= 0 ? idx + 1 : data.length);
+      });
+  }, [user?.id, totalScore]);
 
   const recentActivity = useMemo((): ActivityItem[] => {
     const items: ActivityItem[] = [
@@ -229,7 +239,7 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (user) {
-        const { error } = await supabase.from('match_predictions').upsert(
+        const { error } = await createClient().from('match_predictions').upsert(
           {
             user_id:       user.id,
             match_id:      matchId,
@@ -271,7 +281,7 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
       dispatch({ type: 'SAVE_PROPS', payload });
 
       if (user) {
-        const { error } = await supabase.from('prop_predictions').upsert(
+        const { error } = await createClient().from('prop_predictions').upsert(
           payload.map((p) => ({
             user_id:       user.id,
             prop_id:       p.propId,
@@ -304,11 +314,12 @@ export function PredictionProvider({ children }: { children: React.ReactNode }) 
       propPredictions:  state.propPredictions,
       totalScore,
       rank,
+      totalPlayers,
       recentActivity,
       saveMatchPrediction,
       savePropPredictions,
     }),
-    [state, totalScore, rank, recentActivity, saveMatchPrediction, savePropPredictions],
+    [state, totalScore, rank, totalPlayers, recentActivity, saveMatchPrediction, savePropPredictions],
   );
 
   return (

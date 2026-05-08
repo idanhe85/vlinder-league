@@ -7,12 +7,11 @@ import { usePredictions } from '@/app/context/PredictionContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
 import { NumberTicker } from '@/app/components/NumberTicker';
+import { CountdownTimer } from '@/app/components/CountdownTimer';
 
 export default function Home() {
-  const { totalScore, rank, recentActivity, matchPredictions, propPredictions } = usePredictions();
-  const { user } = useAuth();
-
-  const isAdmin = user?.id === process.env.NEXT_PUBLIC_ADMIN_UUID;
+  const { totalScore, rank, totalPlayers, recentActivity, matchPredictions, propPredictions } = usePredictions();
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'admin'>('dashboard');
 
   const matchCount = Object.keys(matchPredictions).length;
@@ -29,6 +28,8 @@ export default function Home() {
           Vlinder League · World Cup 2026
         </p>
       </div>
+
+      <CountdownTimer />
 
       {/* ── Admin tab bar (only visible to admin) ─────────────────────── */}
       {isAdmin && (
@@ -100,7 +101,7 @@ export default function Home() {
           iconBg="bg-secondary/10"
           label="Current Rank"
           value={`#${rank}`}
-          sub={rank === 1 ? 'Top of the table!' : `of ${12 + 1} players`}
+          sub={rank === 1 ? 'Top of the table!' : `of ${totalPlayers} players`}
         />
         <StatCard
           icon="sports_soccer"

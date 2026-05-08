@@ -8,8 +8,7 @@ import { createClient } from '@/utils/supabase/client';
 const DOMAIN = '@vlinder.league';
 
 export default function LoginPage() {
-  const router   = useRouter();
-  const supabase = createClient();
+  const router = useRouter();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +20,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await createClient().auth.signInWithPassword({
       email:    username.trim().toLowerCase() + DOMAIN,
       password,
     });
@@ -62,14 +61,12 @@ export default function LoginPage() {
 
         {/* Brand header */}
         <header className="flex flex-col items-center text-center gap-3">
-          <div className="w-20 h-20 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] mb-2">
-            <span
-              className="material-symbols-outlined text-[40px] text-primary-container"
-              style={{ fontVariationSettings: "'FILL' 1", filter: 'drop-shadow(0 0 10px rgba(195,244,0,0.5))' }}
-            >
-              emoji_events
-            </span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Vlinder League"
+            className="w-20 h-20 rounded-full object-contain border border-outline-variant bg-surface-container-highest shadow-[inset_0_2px_10px_rgba(0,0,0,0.5),0_0_20px_rgba(195,244,0,0.2)] mb-2"
+          />
           <h1 className="font-h3 text-h3 text-primary-container italic uppercase tracking-tighter drop-shadow-md">
             Vlinder League
           </h1>
