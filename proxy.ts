@@ -27,7 +27,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth') || pathname.startsWith('/api/');
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/auth') || pathname.startsWith('/api/');
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthRoute) {
@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect authenticated users away from login
-  if (user && pathname === '/login') {
+  if (user && (pathname === '/login' || pathname === '/register')) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
