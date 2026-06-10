@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const DOMAIN = '@vlinder.league';
 
 export async function POST(req: NextRequest) {
-  const { username, password, display_name } = await req.json();
+  const { username, password, display_name, avatar_url } = await req.json();
 
   if (!username || !password) {
     return NextResponse.json({ error: 'Username and password required.' }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     id:           authData.user.id,
     username:     clean,
     display_name: display_name?.trim() || null,
+    avatar_url:   avatar_url || null,
   });
 
   if (profileError) {
