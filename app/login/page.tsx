@@ -153,9 +153,13 @@ export default function LoginPage() {
         </form>
 
         {/* Footer */}
-        <footer className="text-center border-t border-white/5 pt-4">
+        <footer className="text-center border-t border-white/5 pt-4 flex flex-col gap-2">
           <p className="font-body-md text-body-md text-on-surface-variant">
             World Cup 2026 Prediction League
+          </p>
+          <p className="font-body-md text-body-md text-on-surface-variant">
+            No account?{' '}
+            <a href="/register" className="text-primary-container hover:underline">Register here</a>
           </p>
         </footer>
 
